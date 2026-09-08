@@ -1,0 +1,5 @@
+# Skriptlar har doim LF bilan saqlanadi — Windows'da klonlab, Linux serverga
+# ko'chirilsa \r belgilari tufayli ishlamay qolmasligi uchun.
+*.sh   text eol=lf
+*.py   text eol=lf
+*.service text eol=lf
