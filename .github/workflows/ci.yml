@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - name: Testlar
+        run: npm test
+        env:
+          HAMROH_OFFLINE: '1'
+      - name: TypeScript tekshiruvi
+        run: npm run typecheck

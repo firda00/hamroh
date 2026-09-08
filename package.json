@@ -1,0 +1,21 @@
+{
+  "name": "hamroh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hamroh — shaxsiy AI yordamchi: yangiliklar, moliya, vazifalar, hisobotlar, marketing analitikasi. Bosqich 1: LLM'siz deterministik yadro.",
+  "type": "module",
+  "engines": { "node": ">=22.6.0" },
+  "bin": { "hamroh": "./src/cli.ts" },
+  "scripts": {
+    "hamroh": "node src/cli.ts",
+    "serve": "node src/server.ts",
+    "daemon": "node src/daemon.ts",
+    "seed": "node scripts/seed.ts",
+    "test": "node --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.2"
+  }
+}
