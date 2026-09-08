@@ -10,6 +10,7 @@
     "hamroh": "node src/cli.ts",
     "serve": "node src/server.ts",
     "daemon": "node src/daemon.ts",
+    "bot": "node src/cli.ts bot start",
     "seed": "node scripts/seed.ts",
     "eval": "node scripts/eval-llm.ts",
     "test": "node --test",

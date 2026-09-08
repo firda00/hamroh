@@ -12,6 +12,7 @@ import { docsModule } from './docs.ts';
 import { telegramModule } from './telegram.ts';
 import { voiceModule } from './voice.ts';
 import { assistantModule } from './assistant.ts';
+import { botModule } from './bot.ts';
 import { commsModule } from './comms.ts';
 import { recurringModule } from './recurring.ts';
 import { marketingModule } from './marketing.ts';
@@ -34,6 +35,7 @@ export const modules: Module[] = [
   telegramModule, // (10) telegram
   voiceModule, //    (10) ovoz -> matn (Whisper)
   assistantModule, // suhbat va ovozli buyruqlar
+  botModule, //      Telegram bot
   commsModule, // (11) qo'ng'iroq, SMS
   recurringModule, // (12) oylik to'lovlar
   marketingModule, // (13) marketing analitikasi

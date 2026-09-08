@@ -92,6 +92,7 @@ npm run hamroh -- kun --html
 | `telegram` | (10) Telegram | `hamroh telegram send "Salom"` |
 | `ovoz` | (10) Ovoz → matn | `hamroh ovoz sync` |
 | `gap` | Ovozli buyruq, suhbat | `hamroh gap matn "ertaga uchda uchrashuv qo‘y"` |
+| `bot` | Telegram bot | `npm run bot` |
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa calls --missed` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |
@@ -100,6 +101,26 @@ npm run hamroh -- kun --html
 | `eslatma` | — | `hamroh eslatma list` |
 
 To‘liq ro‘yxat: [docs/MODULES.md](docs/MODULES.md).
+
+## Telegram bot
+
+```bash
+npm run bot
+```
+
+Botga oddiy tilda yozasiz («ertaga soat uchda uchrashuv qo‘y») yoki ovozli xabar
+yuborasiz — u tushunib bajaradi va javob qaytaradi (TTS yoqilgan bo‘lsa ovoz bilan).
+`/tong`, `/kun`, `/reja`, `/kurs` kabi tez buyruqlar Telegram menyusida turadi.
+
+Faqat `TELEGRAM_CHAT_ID` va `TELEGRAM_ALLOWED_IDS` dagilar foydalana oladi;
+SMS va xabar yuborish kabi buyruqlar tugma bilan tasdiqlanadi.
+O‘rnatish va xavfsizlik: [docs/TELEGRAM.md](docs/TELEGRAM.md).
+
+Telegramsiz sinash:
+
+```bash
+npm run hamroh -- bot test "ertaga soat uchda uchrashuv qo‘y"
+```
 
 ## Avtomatik ishlash
 
@@ -208,6 +229,7 @@ npm test && npm run typecheck
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
+- [docs/TELEGRAM.md](docs/TELEGRAM.md) — Telegram bot, xavfsizlik, webhook va hosting (Vercel haqida ham)
 - [docs/VOICE.md](docs/VOICE.md) — ovoz: eshitish (Whisper), ovozli buyruqlar, gapirish (TTS)
 - [scripts/tts/README.md](scripts/tts/README.md) — o‘zbekcha ovoz skripti (MMS-TTS)
 

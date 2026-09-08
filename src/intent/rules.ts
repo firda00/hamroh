@@ -179,6 +179,47 @@ const RULES: Rule[] = [
     },
   },
   {
+    id: 'sms',
+    any: /\bsms\b/i,
+    build: (ctx, text) => {
+      // Raqam to'g'ridan-to'g'ri aytilgan bo'lishi mumkin
+      let phone = text.match(/(\+?998\d{9}|\b\d{9}\b)/)?.[1] ?? '';
+
+      // Bo'lmasa — ismni bazadan qidiramiz (lid yoki qo'ng'iroqlar tarixidan)
+      if (!phone) {
+        for (const word of text.split(/\s+/)) {
+          const name = word.replace(/(ga|ka|qa|niki|ning)$/i, '');
+          if (name.length < 3) continue;
+          const row = ctx.db.get<{ phone: string | null }>(
+            `SELECT phone FROM leads WHERE phone IS NOT NULL AND name LIKE ?
+             UNION SELECT phone FROM calls WHERE name LIKE ? LIMIT 1`,
+            `%${name}%`,
+            `%${name}%`,
+          );
+          if (row?.phone) {
+            phone = row.phone;
+            break;
+          }
+        }
+      }
+      if (!phone) return null;
+
+      // Xabar matni: qo'shtirnoq ichida yoki "sms" so'zidan keyin
+      const quoted = text.match(/["«“']([^"»”']{3,})["»”']/)?.[1];
+      const after = text.split(/\bsms\b/i)[1]?.replace(/^\s*(yubor|jo‘nat|jonat|yoz)\w*\s*:?\s*/i, '') ?? '';
+      const body = (quoted ?? after).trim();
+      if (!body) return null;
+
+      return {
+        module: 'aloqa',
+        command: 'sms',
+        args: [phone, body],
+        confidence: 0.7,
+        explain: `SMS ${phone}: "${body}"`,
+      };
+    },
+  },
+  {
     id: 'soglik',
     any: /\b(qadam|uxladim|uyqu|vazn|suv ichdim)\b/i,
     build: (_ctx, text) => {

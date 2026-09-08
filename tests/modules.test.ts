@@ -231,3 +231,65 @@ test('ovoz: navbat faqat o‘girilmagan audio xabarlarni oladi', async () => {
   assert.deepEqual(items.map((m) => m.media_id).sort(), ['f1', 'f2']);
   ctx.db.close();
 });
+
+test('bot: ruxsat nazorati — ro‘yxatdagilar va begonalar', async () => {
+  const ctx = ctxFor();
+  const { isAllowed, allowedIds } = await import('../src/modules/bot.ts');
+
+  ctx.cfg.telegram = { token: 'x', chatId: '111' };
+  delete process.env['TELEGRAM_ALLOWED_IDS'];
+  assert.deepEqual(allowedIds(ctx), ['111']);
+  assert.equal(isAllowed(ctx, '111', '999'), true, 'chat_id bo‘yicha ruxsat');
+  assert.equal(isAllowed(ctx, '222', '999'), false, 'begona chat kirmasligi kerak');
+
+  process.env['TELEGRAM_ALLOWED_IDS'] = '222, 333';
+  assert.equal(isAllowed(ctx, '222', '0'), true);
+  assert.equal(isAllowed(ctx, '444', '333'), true, 'user_id bo‘yicha ham');
+  assert.equal(isAllowed(ctx, '444', '555'), false);
+  delete process.env['TELEGRAM_ALLOWED_IDS'];
+
+  // Ro'yxat umuman bo'sh bo'lsa — hech kimga ruxsat yo'q (ataylab)
+  ctx.cfg.telegram = { token: 'x', chatId: '' };
+  assert.equal(isAllowed(ctx, '111', '111'), false);
+  ctx.db.close();
+});
+
+test('bot: tasdiq kutayotgan amal bir marta bajariladi', async () => {
+  const ctx = ctxFor();
+  const { stashAction, takeAction } = await import('../src/modules/bot.ts');
+
+  const intent = {
+    module: 'aloqa', command: 'sms', args: ['+998901234567', 'salom'],
+    confidence: 0.8, explain: 'SMS yuborish', needsConfirm: true, source: 'rules' as const,
+  };
+  const id = stashAction(ctx, '111', intent);
+  assert.ok(id.length > 0);
+  assert.ok(id.length <= 64, 'callback_data 64 baytdan oshmasligi kerak');
+
+  const first = takeAction(ctx, id);
+  assert.deepEqual(first?.args, intent.args);
+  assert.equal(takeAction(ctx, id), null, 'ikkinchi marta bajarilmasligi kerak');
+  assert.equal(takeAction(ctx, 'yoq'), null);
+  ctx.db.close();
+});
+
+test('sms buyrug‘i: raqam bazadan topiladi va tasdiq talab qilinadi', async () => {
+  const ctx = ctxFor();
+  const { routeByRules } = await import('../src/intent/rules.ts');
+  ctx.db.run(
+    `INSERT INTO leads(created_at, name, phone, source) VALUES(?,?,?,?)`,
+    iso(0), 'Nodira opa', '+998901234567', 'instagram',
+  );
+
+  const intent = routeByRules(ctx, 'Nodira opaga sms yubor ertaga soat 10 da kutamiz');
+  assert.ok(intent, 'sms buyrug‘i tanilmadi');
+  assert.equal(intent.module, 'aloqa');
+  assert.equal(intent.command, 'sms');
+  assert.equal(intent.args[0], '+998901234567', 'raqam bazadan topilishi kerak');
+  assert.ok(intent.args[1]?.includes('kutamiz'), intent.args[1]);
+  assert.equal(intent.needsConfirm, true, 'SMS tasdiqsiz ketmasligi kerak');
+
+  // Notanish ism va raqamsiz — buyruq yasalmaydi
+  assert.equal(routeByRules(ctx, 'kimgadir sms yubor'), null);
+  ctx.db.close();
+});

@@ -60,6 +60,20 @@ async function main(): Promise<void> {
           return json(res, 200, { kind, text, sections });
         }
 
+        // Telegram webhook — bot.ts dagi bir xil ishlov beruvchiga boradi
+        if (url.pathname === '/telegram' && req.method === 'POST') {
+          const secret = process.env['TELEGRAM_WEBHOOK_SECRET'] ?? '';
+          if (secret && req.headers['x-telegram-bot-api-secret-token'] !== secret) {
+            return json(res, 401, { error: 'secret token mos kelmadi' });
+          }
+          const update = await readBody(req);
+          // Telegram tez javob kutadi — ishlov fonda ketadi
+          json(res, 200, { ok: true });
+          const { handleUpdate } = await import('./modules/bot.ts');
+          handleUpdate(ctx, update as never).catch((e: unknown) => log.error(`webhook: ${(e as Error).message}`));
+          return;
+        }
+
         if (url.pathname === '/run' && req.method === 'POST') {
           const body = await readBody(req);
           const mod = byId(String(body['module'] ?? ''));

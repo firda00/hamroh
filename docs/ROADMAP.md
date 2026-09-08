@@ -64,7 +64,7 @@ Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 
 ## Bosqich 4 — Interfeys
 
-- [ ] Telegram bot to‘liq boshqaruv paneli sifatida (tugmalar bilan)
+- [x] ~~Telegram bot to‘liq boshqaruv paneli sifatida (tugmalar bilan)~~ (bajarildi: `bot` moduli)
 - [ ] Veb interfeys (`npm run serve` allaqachon API beradi)
 - [ ] Mobil bildirishnomalar
 

@@ -229,6 +229,15 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_deliver ON notifications(status, deliver_at);
 
+-- Tasdiq kutayotgan amallar (Telegram tugmalari uchun)
+CREATE TABLE IF NOT EXISTS pending_actions (
+  id         TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  chat_id    TEXT NOT NULL,
+  payload    TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'kutilmoqda'
+);
+
 -- Kunlik hisobot suratlari: o'sish darajasini hisoblash uchun
 CREATE TABLE IF NOT EXISTS daily_reports (
   date       TEXT NOT NULL,

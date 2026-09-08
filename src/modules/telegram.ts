@@ -12,7 +12,7 @@ import { basename } from 'node:path';
  * Bot API dan foydalanadi — .env da TELEGRAM_BOT_TOKEN va TELEGRAM_CHAT_ID kerak.
  */
 
-type TgUpdate = {
+export type TgUpdate = {
   update_id: number;
   message?: {
     message_id: number;
@@ -20,7 +20,7 @@ type TgUpdate = {
     text?: string;
     caption?: string;
     chat: { id: number; title?: string; username?: string; first_name?: string };
-    from?: { username?: string; first_name?: string };
+    from?: { id?: number; username?: string; first_name?: string };
     document?: { file_name: string; file_id: string };
     voice?: { file_id: string; duration?: number };
     audio?: { file_id: string; duration?: number; file_name?: string };
@@ -30,9 +30,40 @@ type TgUpdate = {
   };
 };
 
-type TgResp<T> = { ok: boolean; result: T; description?: string };
+export type TgResp<T> = { ok: boolean; result: T; description?: string };
 
-const api = (ctx: Ctx, method: string): string => `https://api.telegram.org/bot${ctx.cfg.telegram.token}/${method}`;
+export const api = (ctx: Ctx, method: string): string => `https://api.telegram.org/bot${ctx.cfg.telegram.token}/${method}`;
+
+/** Bot API metodini chaqiradi va natijani tekshiradi. */
+export async function call<T>(ctx: Ctx, method: string, body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(api(ctx, method), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const data = (await res.json()) as TgResp<T>;
+  if (!data.ok) throw new Error(`Telegram ${method}: ${data.description ?? res.status}`);
+  return data.result;
+}
+
+export type Button = { text: string; data: string };
+
+/** Tugmali xabar — tasdiq so'rash uchun. */
+export async function sendButtons(ctx: Ctx, chatId: string, text: string, rows: Button[][]): Promise<void> {
+  await call(ctx, 'sendMessage', {
+    chat_id: chatId,
+    text: text.slice(0, 4000),
+    reply_markup: {
+      inline_keyboard: rows.map((row) => row.map((b) => ({ text: b.text, callback_data: b.data }))),
+    },
+  });
+}
+
+/** Tugma bosilganda Telegram "soat"ini to'xtatadi. */
+export async function answerCallback(ctx: Ctx, id: string, text = ''): Promise<void> {
+  await call(ctx, 'answerCallbackQuery', { callback_query_id: id, text: text.slice(0, 200) });
+}
 
 export type Media = { kind: string; fileId: string; name: string; durationSec: number };
 
