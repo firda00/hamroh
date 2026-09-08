@@ -62,6 +62,12 @@ Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 - [ ] **PDF** — headless brauzer orqali to‘g‘ridan-to‘g‘ri PDF
 - [x] ~~**Ovozli xabar** — Telegram audio → matn~~ (bajarildi: `ovoz` moduli, [VOICE.md](VOICE.md))
 
+## Telefon qo‘ng‘irog‘i
+
+- [x] ~~Agent qo‘ng‘iroq qilib gapiradi~~ (`qongiroq` moduli: Asterisk yoki Twilio)
+- [x] ~~Javobni yozib olib, buyruq sifatida bajarish~~ (turn-based)
+- [ ] To‘liq jonli suhbat (real vaqt oqimi, VAD, barge-in) — alohida loyiha hajmida
+
 ## Bosqich 4 — Interfeys
 
 - [x] ~~Telegram bot to‘liq boshqaruv paneli sifatida (tugmalar bilan)~~ (bajarildi: `bot` moduli)

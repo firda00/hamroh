@@ -13,6 +13,9 @@ export type SttKind = 'off' | 'local';
 /** off — ovozli javob yo'q · http — OpenAI-mos server · cmd — ixtiyoriy dastur. */
 export type TtsKind = 'off' | 'http' | 'cmd';
 
+/** off — qo'ng'iroq yo'q · cmd — Asterisk/mahalliy shlyuz · twilio — Twilio API. */
+export type TelKind = 'off' | 'cmd' | 'twilio';
+
 export type Config = {
   dbPath: string;
   tz: string;
@@ -43,6 +46,15 @@ export type Config = {
   ttsCmd: string;
   /** Ovozli xabarlarni buyruq sifatida bajarish. */
   voiceCommands: boolean;
+  /** Telefon qo'ng'irog'i. */
+  tel: TelKind;
+  telCmd: string;
+  telMyNumber: string;
+  telAllowed: string[];
+  telAudioBase: string;
+  twilioSid: string;
+  twilioToken: string;
+  twilioFrom: string;
   extraFeeds: string[];
   telegram: { token: string; chatId: string };
   outDir: string;
@@ -80,6 +92,14 @@ export function loadConfig(): Config {
     ttsKey: env('HAMROH_TTS_KEY', 'local'),
     ttsCmd: env('HAMROH_TTS_CMD'),
     voiceCommands: env('HAMROH_VOICE_COMMANDS') === '1',
+    tel: (['cmd', 'twilio'].includes(env('HAMROH_TEL', 'off')) ? env('HAMROH_TEL') : 'off') as TelKind,
+    telCmd: env('HAMROH_TEL_CMD'),
+    telMyNumber: env('HAMROH_TEL_MY_NUMBER'),
+    telAllowed: env('HAMROH_TEL_ALLOWED').split(',').map((s) => s.trim()).filter(Boolean),
+    telAudioBase: env('HAMROH_TEL_AUDIO_BASE'),
+    twilioSid: env('TWILIO_ACCOUNT_SID'),
+    twilioToken: env('TWILIO_AUTH_TOKEN'),
+    twilioFrom: env('TWILIO_FROM'),
     extraFeeds: env('HAMROH_NEWS_FEEDS').split(',').map((s) => s.trim()).filter(Boolean),
     telegram: { token: env('TELEGRAM_BOT_TOKEN'), chatId: env('TELEGRAM_CHAT_ID') },
     outDir: resolve(env('HAMROH_OUT', './out')),

@@ -23,6 +23,7 @@ export const CONFIRM_REQUIRED = new Set([
   'telegram:file',
   'telegram:reply',
   'aloqa:sms',
+  'qongiroq:qil',
   'vazifa:rm',
   'kalendar:rm',
 ]);

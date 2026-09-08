@@ -93,6 +93,7 @@ npm run hamroh -- kun --html
 | `ovoz` | (10) Ovoz → matn | `hamroh ovoz sync` |
 | `gap` | Ovozli buyruq, suhbat | `hamroh gap matn "ertaga uchda uchrashuv qo‘y"` |
 | `bot` | Telegram bot | `npm run bot` |
+| `qongiroq` | Telefon qo‘ng‘irog‘i | `hamroh qongiroq brifing` |
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa calls --missed` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |
@@ -101,6 +102,16 @@ npm run hamroh -- kun --html
 | `eslatma` | — | `hamroh eslatma list` |
 
 To‘liq ro‘yxat: [docs/MODULES.md](docs/MODULES.md).
+
+## Serverga o‘rnatish
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/firda00/hamroh/main/scripts/install-vps.sh | sudo bash
+```
+
+Ubuntu 22.04/24.04: Node, kod, `.env`, systemd xizmatlari — hammasi bir buyruqda.
+Qayta ishga tushirish xavfsiz, yangilash `--update` bilan.
+Batafsil: [docs/VPS.md](docs/VPS.md).
 
 ## Telegram bot
 
@@ -229,6 +240,8 @@ npm test && npm run typecheck
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
+- [docs/VPS.md](docs/VPS.md) — serverga o‘rnatish, systemd, zaxira nusxa
+- [docs/CALLS.md](docs/CALLS.md) — telefon qo‘ng‘irog‘i (Asterisk, Twilio)
 - [docs/TELEGRAM.md](docs/TELEGRAM.md) — Telegram bot, xavfsizlik, webhook va hosting (Vercel haqida ham)
 - [docs/VOICE.md](docs/VOICE.md) — ovoz: eshitish (Whisper), ovozli buyruqlar, gapirish (TTS)
 - [scripts/tts/README.md](scripts/tts/README.md) — o‘zbekcha ovoz skripti (MMS-TTS)

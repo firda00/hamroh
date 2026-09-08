@@ -8,6 +8,7 @@ import type { Ctx } from '../src/core/types.ts';
 import { rulesProvider } from '../src/llm/rules.ts';
 import { disabledStt } from '../src/stt/provider.ts';
 import { disabledTts } from '../src/tts/provider.ts';
+import { disabledTel } from '../src/tel/provider.ts';
 import { loadConfig } from '../src/core/config.ts';
 import { totals, savingTips } from '../src/modules/finance.ts';
 import { dayKpis, weakSpots } from '../src/modules/report.ts';
@@ -24,7 +25,7 @@ const NOW = new Date('2026-09-08T06:00:00.000Z'); // Toshkentda 11:00
 function ctxFor(): Ctx {
   process.env['HAMROH_DB'] = ':memory:';
   const cfg = { ...loadConfig(), dbPath: ':memory:', tz: 'Asia/Tashkent', currency: 'UZS', offline: true };
-  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), now: NOW };
+  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), tel: disabledTel(), now: NOW };
 }
 
 const iso = (daysAgo: number, h = 12): string =>
@@ -291,5 +292,57 @@ test('sms buyrug‘i: raqam bazadan topiladi va tasdiq talab qilinadi', async ()
 
   // Notanish ism va raqamsiz — buyruq yasalmaydi
   assert.equal(routeByRules(ctx, 'kimgadir sms yubor'), null);
+  ctx.db.close();
+});
+
+test('qo‘ng‘iroq: raqam bir ko‘rinishga keltiriladi', async () => {
+  const { normalizeNumber } = await import('../src/tel/provider.ts');
+  assert.equal(normalizeNumber('901234567'), '+998901234567');
+  assert.equal(normalizeNumber('998901234567'), '+998901234567');
+  assert.equal(normalizeNumber('+998 90 123-45-67'), '+998901234567');
+  assert.equal(normalizeNumber('+12025550100'), '+12025550100');
+});
+
+test('qo‘ng‘iroq: faqat ruxsat berilgan raqamlarga', async () => {
+  const { isAllowedNumber, allowedNumbers } = await import('../src/tel/index.ts');
+  const base = { ...loadConfig(), telMyNumber: '901234567', telAllowed: ['+998907776655'] };
+
+  assert.deepEqual(allowedNumbers(base), ['+998901234567', '+998907776655']);
+  assert.equal(isAllowedNumber(base, '+998901234567'), true);
+  assert.equal(isAllowedNumber(base, '90 123 45 67'), true, 'formatdan qat’i nazar');
+  assert.equal(isAllowedNumber(base, '+998901110000'), false, 'begona raqam');
+
+  // Ro'yxat bo'sh bo'lsa hech kimga ruxsat yo'q
+  const empty = { ...base, telMyNumber: '', telAllowed: [] };
+  assert.deepEqual(allowedNumbers(empty), []);
+  assert.equal(isAllowedNumber(empty, '+998901234567'), false);
+});
+
+test('qo‘ng‘iroq: o‘chirilganda va ruxsatsiz raqamda tushunarli xato', async () => {
+  const ctx = ctxFor();
+  const { makeCall } = await import('../src/modules/call.ts');
+
+  await assert.rejects(
+    () => makeCall(ctx, '+998901234567', 'salom'),
+    (e: Error) => e.message.includes('HAMROH_TEL=off'),
+  );
+
+  // Provayder yoqilgan, lekin raqam ro'yxatda yo'q
+  ctx.tel = { id: 'test', enabled: true, call: () => Promise.resolve({ ok: true, provider: 'test' }) };
+  ctx.tts = { id: 'test', enabled: true, speak: () => Promise.resolve({ bytes: new Uint8Array([1]), ext: 'wav', provider: 'test' }) };
+  ctx.cfg.telMyNumber = '+998901234567';
+  ctx.cfg.telAllowed = [];
+
+  await assert.rejects(
+    () => makeCall(ctx, '+998907776655', 'salom'),
+    (e: Error) => e.message.includes('ruxsat ro‘yxatida yo‘q'),
+  );
+
+  // O'z raqamiga — ishlaydi va tarixga yoziladi
+  const out = await makeCall(ctx, '901234567', 'Arenda to‘lovi bugun');
+  assert.equal(out.ok, true);
+  assert.equal(out.to, '+998901234567');
+  const row = ctx.db.get<{ n: number }>(`SELECT COUNT(*) n FROM calls WHERE direction='out'`);
+  assert.equal(row?.n, 1, 'chiquvchi qo‘ng‘iroq tarixga yozilishi kerak');
   ctx.db.close();
 });

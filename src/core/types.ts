@@ -3,6 +3,7 @@ import type { Db } from './db.ts';
 import type { LlmProvider } from '../llm/provider.ts';
 import type { SttProvider } from '../stt/provider.ts';
 import type { TtsProvider } from '../tts/provider.ts';
+import type { CallProvider } from '../tel/provider.ts';
 
 export type Ctx = {
   cfg: Config;
@@ -10,6 +11,7 @@ export type Ctx = {
   llm: LlmProvider;
   stt: SttProvider;
   tts: TtsProvider;
+  tel: CallProvider;
   now: Date;
 };
 

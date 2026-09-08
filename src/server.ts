@@ -60,6 +60,28 @@ async function main(): Promise<void> {
           return json(res, 200, { kind, text, sections });
         }
 
+        // Qo'ng'iroq uchun audio: Twilio faylni internetdan oladi.
+        // Faqat out/public ichidagi fayllar, faqat o'qish uchun; nom UUID bo'lgani
+        // uchun taxmin qilib bo'lmaydi.
+        if (url.pathname.startsWith('/audio/')) {
+          const name = url.pathname.slice('/audio/'.length);
+          if (!/^[\w.-]+$/.test(name) || name.includes('..')) {
+            return json(res, 400, { error: 'noto‘g‘ri nom' });
+          }
+          const { readFile } = await import('node:fs/promises');
+          const { join } = await import('node:path');
+          try {
+            const bytes = await readFile(join(ctx.cfg.outDir, 'public', name));
+            const ext = name.split('.').pop() ?? '';
+            const mime: Record<string, string> = { ogg: 'audio/ogg', mp3: 'audio/mpeg', wav: 'audio/wav' };
+            res.writeHead(200, { 'content-type': mime[ext] ?? 'application/octet-stream', 'content-length': bytes.length });
+            res.end(bytes);
+          } catch {
+            json(res, 404, { error: 'topilmadi' });
+          }
+          return;
+        }
+
         // Telegram webhook — bot.ts dagi bir xil ishlov beruvchiga boradi
         if (url.pathname === '/telegram' && req.method === 'POST') {
           const secret = process.env['TELEGRAM_WEBHOOK_SECRET'] ?? '';
