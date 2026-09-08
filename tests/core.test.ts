@@ -8,6 +8,8 @@ import { parseFeed, stripTags, tag } from '../src/util/http.ts';
 import { parseIcs } from '../src/modules/calendar.ts';
 import { readCsv } from '../src/util/office.ts';
 import { rulesProvider } from '../src/llm/rules.ts';
+import { localProvider } from '../src/llm/local.ts';
+import { buildPrompt, systemFor, stripThinking, matchLabel } from '../src/llm/prompts.ts';
 
 const TZ = 'Asia/Tashkent';
 
@@ -135,4 +137,57 @@ test('qoidaviy LLM: qisqartma va toifalash', async () => {
 
   const cls = await llm.run({ kind: 'classify', text: 'Ofis arendasi uchun to‘lov', labels: ['arenda', 'ovqat', 'transport'] });
   assert.equal(cls.label, 'arenda');
+});
+
+test('promptlar: reasoning bloklari olib tashlanadi', () => {
+  assert.equal(stripThinking('<think>uzoq o‘ylash</think>Javob shu'), 'Javob shu');
+  assert.equal(stripThinking('Oddiy javob'), 'Oddiy javob');
+  assert.equal(stripThinking('birinchi qism</think>  Toza javob'), 'Toza javob');
+});
+
+test('promptlar: classify javobidan yorliq ajratiladi', () => {
+  const labels = ['arenda', 'ovqat', 'transport'];
+  assert.equal(matchLabel('arenda', labels).label, 'arenda');
+  assert.equal(matchLabel('<think>o‘ylayapman</think>Bu ovqat toifasi', labels).label, 'ovqat');
+  assert.equal(matchLabel('bilmadim', labels).confidence, 0.2);
+});
+
+test('promptlar: har bir vazifa uchun prompt tuziladi', () => {
+  const sum = buildPrompt({ kind: 'summarize', text: 'matn', maxSentences: 2 });
+  assert.ok(sum.text.includes('2 ta gapda'));
+  assert.equal(buildPrompt({ kind: 'classify', text: 'x', labels: ['a', 'b'] }).temperature, 0);
+  assert.ok(systemFor({ kind: 'chat', prompt: 'x' }).includes('o‘zbek tilida'));
+});
+
+test('lokal provayder: OpenAI-mos javobni o‘qiydi', async () => {
+  const { createServer } = await import('node:http');
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const sent = JSON.parse(body) as { messages: { content: string }[] };
+      assert.ok(sent.messages[0]?.content.includes('Hamroh'), 'system prompt yuborilmadi');
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ choices: [{ message: { content: '<think>hmm</think>arenda' } }] }));
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as { port: number }).port;
+
+  try {
+    const llm = localProvider({ url: `http://127.0.0.1:${port}/v1`, model: 'test-model' });
+    const res = await llm.run({ kind: 'classify', text: 'Ofis ijarasi', labels: ['arenda', 'ovqat'] });
+    assert.equal(res.label, 'arenda');
+    assert.equal(res.text, 'arenda', 'think bloki olib tashlanmadi');
+  } finally {
+    server.close();
+  }
+});
+
+test('lokal provayder: server yiqilsa tushunarli xato', async () => {
+  const llm = localProvider({ url: 'http://127.0.0.1:1/v1', model: 'yoq', timeoutMs: 1500 });
+  await assert.rejects(
+    () => llm.run({ kind: 'chat', prompt: 'salom' }),
+    (e: Error) => e.message.includes('Lokal model bilan aloqa yo‘q'),
+  );
 });

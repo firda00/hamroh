@@ -117,6 +117,27 @@ npm run serve
 
 ## Bosqich 2 — LLM ulash
 
+Uch rejim bor, modul kodi hech qaysisida o‘zgarmaydi:
+
+| Rejim | Nima | Narx (oyiga, ~30 so‘rov/kun) |
+| --- | --- | --- |
+| `rules` | LLM'siz, deterministik (standart) | $0 |
+| `local` | O‘z serveringizdagi model (Ollama va h.k.) | server narxi |
+| `anthropic` | Claude API | ~$4–18 |
+
+**Lokal model** (ma'lumot serverdan chiqmaydi):
+
+```
+HAMROH_LLM=local
+HAMROH_LLM_URL=http://127.0.0.1:11434/v1
+HAMROH_LLM_MODEL=qwen3:14b
+```
+
+Model tanlash, VRAM hisobi va narx solishtiruvi: [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md).
+Modelning o‘zbekcha sifatini tekshirish: `npm run eval`.
+
+**Claude API:**
+
 ```bash
 npm install @anthropic-ai/sdk
 ```
@@ -159,6 +180,7 @@ npm test && npm run typecheck
 - [docs/MODULES.md](docs/MODULES.md) — 15 ta talab → modul → buyruq → holat
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
+- [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
 
 ## Litsenziya
 

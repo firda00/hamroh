@@ -98,13 +98,23 @@ async function main(argv: string[]): Promise<number> {
     }
 
     if (!isModule && first === 'doctor') {
+      let llmLine = `${ctx.llm.id}${ctx.llm.smart ? '' : ' — qoidaviy rejim (LLM ulanmagan)'}`;
+      if (ctx.cfg.llm === 'local') {
+        const { localStatus } = await import('./llm/local.ts');
+        const st = await localStatus(ctx.cfg.llmUrl, ctx.cfg.llmKey);
+        llmLine += st.ok
+          ? `
+             server ✓ ${ctx.cfg.llmUrl} · modellar: ${st.models.join(', ') || '(ro‘yxat bo‘sh)'}`
+          : `
+             server ✗ ${ctx.cfg.llmUrl} — ${st.error}`;
+      }
       const lines = [
         `Vaqt:        ${stamp(ctx.now, ctx.cfg.tz)} (${ctx.cfg.tz})`,
         `Baza:        ${ctx.cfg.dbPath} ${existsSync(ctx.cfg.dbPath) ? '✓' : '(yangi yaratiladi)'}`,
         `Shahar:      ${ctx.cfg.city}`,
         `Valyuta:     ${ctx.cfg.currency}`,
         `Internet:    ${ctx.cfg.offline ? 'o‘chirilgan (HAMROH_OFFLINE=1)' : 'ruxsat berilgan'}`,
-        `LLM:         ${ctx.llm.id}${ctx.llm.smart ? '' : ' — qoidaviy rejim (bosqich 1)'}`,
+        `LLM:         ${llmLine}`,
         `Telegram:    ${ctx.cfg.telegram.token ? 'token bor' : 'ulanmagan'}`,
         `Modullar:    ${modules.length} ta`,
         `Vazifalar:   ${allJobs(modules).length} ta cron`,

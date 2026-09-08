@@ -15,7 +15,15 @@ type LlmTask =
 
 Shu sabab LLM ni yoqish/o‘chirish modul kodini o‘zgartirmaydi — faqat provayder almashadi.
 
-## Yoqish
+## Uch rejim
+
+| `HAMROH_LLM` | Nima | Qachon |
+| --- | --- | --- |
+| `rules` | LLM'siz, deterministik | Standart. Bepul, internetsiz, natija har doim bir xil |
+| `local` | OpenAI-mos server (Ollama, llama.cpp, vLLM, LM Studio) | Ma'lumot chiqmasligi kerak bo‘lsa — [LOCAL-LLM.md](LOCAL-LLM.md) |
+| `anthropic` | Claude API | Eng yuqori sifat, kam pul (bu hajmda ~$4–18/oy) |
+
+## Yoqish (Claude API)
 
 ```bash
 npm install @anthropic-ai/sdk
