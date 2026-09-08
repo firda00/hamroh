@@ -5,8 +5,8 @@
 Maqsad: tizim LLM'siz ham foydali bo‘lsin. Barcha ma’lumot lokal, hamma hisob-kitob
 deterministik. LLM ulanmasa ham kunlik ish to‘xtamaydi.
 
-- 16 modul, 60+ buyruq, 20 ta cron vazifasi
-- Lokal SQLite baza (23 jadval), nol runtime bog‘liqlik
+- 17 modul, 79 ta buyruq, 16 ta cron vazifasi
+- Lokal SQLite baza (21 jadval), nol runtime bog‘liqlik
 - Kalitsiz tashqi manbalar: CBU (kurs), Open-Meteo (ob-havo), Google News RSS
 - Ertalabki brifing va kun yakuni + o‘sish darajasi
 - Haqiqiy `.xlsx` / `.docx` eksport, diagrammali HTML hisobot
