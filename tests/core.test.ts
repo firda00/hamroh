@@ -14,6 +14,7 @@ import { parseUzbekNumber, extractTime, extractWhen, cleanTitle } from '../src/u
 import { parseLlmRoute } from '../src/intent/index.ts';
 import { splitCommand } from '../src/tts/cmd.ts';
 import { spokenText } from '../src/modules/assistant.ts';
+import { numberToUzbekWords, ordinalUz, naturalizeForSpeech, toSentences } from '../src/util/speech.ts';
 
 const TZ = 'Asia/Tashkent';
 
@@ -244,6 +245,42 @@ test('TTS buyrug‘i to‘g‘ri bo‘laklanadi', () => {
 test('ovozga yaroqli matn: jadval bezaklari olib tashlanadi', () => {
   const raw = 'Valyuta  Bugun\n───────  ─────\nUSD      11 789\nEUR      13 702';
   const spoken = spokenText(raw);
-  assert.ok(!spoken.includes('─'));
-  assert.ok(spoken.includes('USD'));
+  assert.ok(!spoken.includes('─'), spoken);
+  // Valyuta kodi ham, raqam ham gapiriladigan so‘zga aylanadi
+  assert.ok(spoken.includes('dollar'), spoken);
+  assert.ok(spoken.includes('o‘n bir ming yetti yuz sakson to‘qqiz'), spoken);
+});
+
+test('son -> o‘zbekcha so‘z', () => {
+  assert.equal(numberToUzbekWords(0), 'nol');
+  assert.equal(numberToUzbekWords(1500), 'ming besh yuz');
+  assert.equal(numberToUzbekWords(11789), 'o‘n bir ming yetti yuz sakson to‘qqiz');
+  assert.equal(numberToUzbekWords(1_250_000), 'bir million ikki yuz ellik ming');
+  assert.equal(numberToUzbekWords(-42), 'minus qirq ikki');
+  assert.equal(ordinalUz(9), 'to‘qqizinchi');
+  assert.equal(ordinalUz(21), 'yigirma birinchi');
+  assert.equal(ordinalUz(20), 'yigirmanchi');
+});
+
+test('ovozga tayyorlash: raqam, valyuta, sana, vaqt so‘zga aylanadi', () => {
+  const out = naturalizeForSpeech('USD 11 789 UZS ↑ +0,4% · 2026-09-09 15:00');
+  assert.ok(out.includes('dollar'), out);
+  assert.ok(out.includes('o‘n bir ming yetti yuz sakson to‘qqiz so‘m'), out);
+  assert.ok(out.includes('foizga oshdi'), out);
+  assert.ok(out.includes('to‘qqizinchi sentyabr'), out);
+  assert.ok(out.includes('soat uchda'), out);
+  assert.ok(!/\d/.test(out), `raqam qolib ketdi: ${out}`);
+});
+
+test('ovozga tayyorlash: emoji va bezaklar tushib qoladi', () => {
+  const out = naturalizeForSpeech('📅 #3 Uchrashuv — *muhim*');
+  assert.ok(!out.includes('📅'));
+  assert.ok(!out.includes('*'));
+  assert.ok(out.includes('raqam uch'), out);
+});
+
+test('gaplarga bo‘lish: pauza qo‘yish uchun', () => {
+  const s = toSentences('Birinchi gap. Ikkinchi gap! Uchinchi');
+  assert.equal(s.length, 3);
+  assert.equal(s[2], 'Uchinchi.');
 });

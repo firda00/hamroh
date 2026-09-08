@@ -4,6 +4,7 @@ import { parseArgs } from '../core/args.ts';
 import { route, execute, describe } from '../intent/index.ts';
 import { dateKey } from '../util/date.ts';
 import { truncate } from '../util/fmt.ts';
+import { naturalizeForSpeech } from '../util/speech.ts';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
@@ -30,7 +31,9 @@ export function spokenText(raw: string, maxChars = 600): string {
     )
     .filter(Boolean)
     .join('. ');
-  return truncate(cleaned.replace(/\.{2,}/g, '.').replace(/\s+/g, ' '), maxChars);
+  // Raqam va belgilarni so'zga aylantirish — TTS "robot" bo'lib eshitilmasligi uchun
+  const spoken = naturalizeForSpeech(cleaned.replace(/\.{2,}/g, '.').replace(/\s+/g, ' '));
+  return truncate(spoken, maxChars);
 }
 
 export type TalkResult = {
@@ -149,7 +152,7 @@ export const assistantModule: Module = {
         const a = parseArgs(argv);
         const text = a.rest(0).trim();
         if (!text) return { text: 'Matn kerak: gap ayt "Assalomu alaykum"' };
-        const speech = await ctx.tts.speak(text);
+        const speech = await ctx.tts.speak(naturalizeForSpeech(text));
         mkdirSync(ctx.cfg.outDir, { recursive: true });
         const file = join(ctx.cfg.outDir, a.str('fayl', `ovoz-${dateKey(ctx.now, ctx.cfg.tz)}.${speech.ext}`));
         writeFileSync(file, speech.bytes);

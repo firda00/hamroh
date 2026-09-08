@@ -1,0 +1,9 @@
+# O'zbekcha TTS uchun (scripts/tts/mms_tts_uz.py)
+#
+# GPU (CUDA 12.x) bo'lsa torch ni alohida o'rnating:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+# CPU da ham ishlaydi — MMS-TTS kichik model, sekundiga bir necha soniya audio beradi.
+
+torch>=2.2
+transformers>=4.44
+numpy>=1.24

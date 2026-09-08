@@ -224,23 +224,73 @@ HAMROH_TTS_FORMAT=ogg
 
 `{out}` — yaratiladigan fayl yo‘li, `{text}` — matn (yozilmasa matn stdin orqali beriladi).
 
-### O‘zbekcha ovoz — ochiq masala
+### O‘zbekcha ovoz: MMS-TTS (tayyor skript bor)
 
-Bu yerda vaziyat matndan ham qiyin: **tayyor o‘zbekcha ovozlar deyarli yo‘q**.
-Ko‘pchilik ochiq TTS modellari (Piper, Kokoro, XTTS) o‘zbek tilini qamramaydi.
+Repoda tayyor skript: [`scripts/tts/mms_tts_uz.py`](../scripts/tts/mms_tts_uz.py).
+Meta MMS-TTS modeli orqali ishlaydi, kalit va obuna talab qilmaydi.
 
-Amaliy variantlar:
+```bash
+pip install -r scripts/tts/requirements.txt && sudo apt install ffmpeg
+```
 
-1. **Meta MMS-TTS** — `facebook/mms-tts-uzb` modeli o‘zbek tilini qo‘llab-quvvatlaydi.
-   Kichik Python skript yozib, uni `HAMROH_TTS_CMD` ga ulash mumkin — ovoz sifati
-   o‘rtacha, lekin tushunarli va bepul.
-2. **Mahalliy xizmatlar** — O‘zbekistonda o‘zbekcha TTS beradigan API lar bor
-   (Mohir AI va shunga o‘xshashlar). Ular odatda tabiiyroq eshitiladi, lekin pullik
-   va matn tashqariga chiqadi.
-3. **Ruscha ovoz bilan o‘zbekcha matn** — ishlamaydi, tinglash qiyin. Tavsiya etilmaydi.
+Server rejimida ishga tushiring (model bir marta yuklanadi — javoblar tez):
 
-Ovoz sifati qoniqarsiz bo‘lsa, TTS ni o‘chirib qo‘ying: matnli javob baribir
-Telegramga keladi va ko‘p hollarda shunisi qulayroq.
+```bash
+python3 scripts/tts/mms_tts_uz.py --serve --port 8010
+```
+
+`.env`:
+
+```
+HAMROH_TTS=http
+HAMROH_TTS_URL=http://127.0.0.1:8010/v1
+HAMROH_TTS_FORMAT=ogg
+```
+
+Tekshirish:
+
+```bash
+npm run hamroh -- gap ayt "Bugun uchta uchrashuv bor"
+```
+
+Batafsil sozlash (tezlik, pauza, model nomi): [scripts/tts/README.md](../scripts/tts/README.md).
+
+### "Robot kabi eshitilmasligi" uchun nima qilindi
+
+Eng katta ta'sir — **modelga qanday matn berilishida**, modelning o‘zida emas.
+Hamroh javobni ovozga berishdan oldin `src/util/speech.ts` orqali tayyorlaydi:
+
+| Xom matn | Ovozga beriladigan matn |
+| --- | --- |
+| `USD 11 789,33 UZS ↑ +0,4%` | «dollar o‘n bir ming yetti yuz sakson to‘qqiz so‘m nol butun to‘rt foizga oshdi» |
+| `📅 #3 — 2026-09-09 15:00` | «raqam uch, to‘qqizinchi sentyabr soat uchda» |
+| `Lidlar: 26 ta ↓ -12,5%` | «lidlar yigirma olti ta o‘n ikki butun besh foizga kamaydi» |
+| Jadval chiziqlari, emoji, `*`, `|` | olib tashlanadi |
+
+Ya'ni TTS hech qachon «U-ES-DE o‘n bir probel yetti yuz sakson to‘qqiz vergul o‘ttiz uch»
+kabi narsani o‘qimaydi. Bundan tashqari skript matnni gaplarga bo‘lib, har birini alohida
+sintez qiladi va orasiga pauza qo‘yadi — uzluksiz o‘qishdan ko‘ra ancha tabiiy chiqadi.
+
+Qo‘shimcha sozlash: `--rate 0.95 --pause 0.3` odatda vazminroq eshitiladi.
+
+### Sifat haqida ochiq gap
+
+MMS-TTS — 1000+ tilni qamrab olgan tadqiqot modeli. O‘zbekcha ovozi **tushunarli, lekin
+tabiiy odam ovozi darajasida emas**: intonatsiya bir xilroq, ba'zi so‘zlarda urg‘u xato.
+Yuqoridagi matn tayyorlash buni sezilarli yaxshilaydi, ammo butunlay yo‘qotmaydi.
+
+Boshqa ochiq modellar (Piper, Kokoro, XTTS) o‘zbek tilini umuman qamramaydi —
+shuning uchun MMS hozircha yagona bepul variant.
+
+Sifat yetarli bo‘lmasa:
+
+1. **Mahalliy tijorat xizmatlari** (Mohir AI va shunga o‘xshashlar) — ancha tabiiy ovoz.
+   OpenAI-mos bo‘lsa `HAMROH_TTS=http`, bo‘lmasa kichik skript orqali `HAMROH_TTS=cmd`
+   bilan ulanadi. Minusi: pullik va matn tashqariga chiqadi.
+2. **TTS ni o‘chirish** — matnli javob Telegramga baribir keladi va ko‘p hollarda
+   o‘qish tinglashdan tezroq.
+
+Ovozli javob — qulaylik, majburiyat emas. Avval sinab ko‘ring, keyin qaror qiling.
 
 ### Telegramda «voice message» bo‘lishi uchun
 

@@ -208,7 +208,8 @@ npm test && npm run typecheck
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
-- [docs/VOICE.md](docs/VOICE.md) — ovozli xabarlarni matnga o‘girish (Whisper)
+- [docs/VOICE.md](docs/VOICE.md) — ovoz: eshitish (Whisper), ovozli buyruqlar, gapirish (TTS)
+- [scripts/tts/README.md](scripts/tts/README.md) — o‘zbekcha ovoz skripti (MMS-TTS)
 
 ## Litsenziya
 
