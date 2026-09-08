@@ -2,12 +2,14 @@ import type { Config } from './config.ts';
 import type { Db } from './db.ts';
 import type { LlmProvider } from '../llm/provider.ts';
 import type { SttProvider } from '../stt/provider.ts';
+import type { TtsProvider } from '../tts/provider.ts';
 
 export type Ctx = {
   cfg: Config;
   db: Db;
   llm: LlmProvider;
   stt: SttProvider;
+  tts: TtsProvider;
   now: Date;
 };
 

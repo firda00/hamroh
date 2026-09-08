@@ -7,6 +7,7 @@ import { openDb } from '../src/core/db.ts';
 import type { Ctx } from '../src/core/types.ts';
 import { rulesProvider } from '../src/llm/rules.ts';
 import { disabledStt } from '../src/stt/provider.ts';
+import { disabledTts } from '../src/tts/provider.ts';
 import { loadConfig } from '../src/core/config.ts';
 import { totals, savingTips } from '../src/modules/finance.ts';
 import { dayKpis, weakSpots } from '../src/modules/report.ts';
@@ -23,7 +24,7 @@ const NOW = new Date('2026-09-08T06:00:00.000Z'); // Toshkentda 11:00
 function ctxFor(): Ctx {
   process.env['HAMROH_DB'] = ':memory:';
   const cfg = { ...loadConfig(), dbPath: ':memory:', tz: 'Asia/Tashkent', currency: 'UZS', offline: true };
-  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), now: NOW };
+  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), now: NOW };
 }
 
 const iso = (daysAgo: number, h = 12): string =>

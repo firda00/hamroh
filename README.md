@@ -91,6 +91,7 @@ npm run hamroh -- kun --html
 | `hujjat` | (9) PDF/Word/taqdimot | `hamroh hujjat word "Shartnoma" --from=matn.md` |
 | `telegram` | (10) Telegram | `hamroh telegram send "Salom"` |
 | `ovoz` | (10) Ovoz → matn | `hamroh ovoz sync` |
+| `gap` | Ovozli buyruq, suhbat | `hamroh gap matn "ertaga uchda uchrashuv qo‘y"` |
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa calls --missed` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |
@@ -146,8 +147,21 @@ HAMROH_STT_MODEL=Systran/faster-whisper-large-v3
 HAMROH_STT_LANG=uz
 ```
 
-Telegram ovozli xabarlari har 10 daqiqada matnga o‘giriladi. O‘rnatish va o‘zbekcha
-aniqligini oshirish: [docs/VOICE.md](docs/VOICE.md).
+Telegram ovozli xabarlari har 10 daqiqada matnga o‘giriladi.
+
+**Ovozli buyruqlar** — aytilgan gap buyruqqa aylanadi va bajariladi:
+
+```bash
+hamroh gap matn "ertaga soat uchda Aziz aka bilan uchrashuv qo‘y"
+```
+
+```bash
+hamroh gap ovoz ./buyruq.ogg --ovoz
+```
+
+Qoidaviy rejimda ham ishlaydi (uchrashuv, eslatma, kirim-chiqim, lid, kurs, ob-havo,
+yangilik, reja, hisobot, to‘lovlar, sog‘liq), LLM ulansa — ancha ko‘proq gapni tushunadi.
+Telegramga ovozli javob ham qaytaradi. O‘rnatish: [docs/VOICE.md](docs/VOICE.md).
 
 **Claude API:**
 

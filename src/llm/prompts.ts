@@ -68,6 +68,27 @@ export function buildPrompt(task: LlmTask): PromptSpec {
         temperature: 0.4,
       };
 
+    case 'route':
+      return {
+        text: [
+          'Foydalanuvchi gapini buyruqqa aylantir.',
+          '',
+          'Mavjud buyruqlar:',
+          task.catalog,
+          '',
+          'Javobni FAQAT JSON ko‘rinishida ber, boshqa hech narsa yozma:',
+          '{"module":"...","command":"...","args":["..."],"explain":"o‘zbekcha bir gap"}',
+          'Mos buyruq bo‘lmasa: {"module":"","command":"","args":[],"explain":"sabab"}',
+          'Sana/vaqtni "YYYY-MM-DD HH:MM" ko‘rinishida yoz. Summani faqat raqam bilan yoz.',
+          '',
+          'Gap:',
+          task.text,
+        ].join('\n'),
+        effort: 'low',
+        maxTokens: 700,
+        temperature: 0,
+      };
+
     case 'chat':
       return { text: task.prompt, effort: 'medium', maxTokens: 8000, temperature: 0.6 };
   }

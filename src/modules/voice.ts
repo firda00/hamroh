@@ -3,7 +3,8 @@ import { parseArgs } from '../core/args.ts';
 import { stamp } from '../util/date.ts';
 import { table, truncate } from '../util/fmt.ts';
 import { sttStatus } from '../stt/local.ts';
-import { downloadFile } from './telegram.ts';
+import { downloadFile, sendText, sendVoice } from './telegram.ts';
+import { talk } from './assistant.ts';
 import { enqueue } from './notify.ts';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -54,6 +55,33 @@ export async function transcribeMessage(ctx: Ctx, msg: VoiceMessage): Promise<st
     msg.id,
   );
   return res.text;
+}
+
+/**
+ * O'girilgan matnni buyruq sifatida bajaradi va javobni Telegramga qaytaradi.
+ * HAMROH_VOICE_COMMANDS=1 bo'lmasa hech narsa qilmaydi.
+ */
+export async function actOnVoice(ctx: Ctx, msg: VoiceMessage, text: string): Promise<string | null> {
+  if (!ctx.cfg.voiceCommands) return null;
+
+  const out = await talk(ctx, text, { speak: ctx.tts.enabled });
+  const chat = ctx.cfg.telegram.chatId;
+
+  if (chat && ctx.cfg.telegram.token) {
+    try {
+      await sendText(ctx, chat, `🎙 "${truncate(text, 200)}"\n\n${out.text}`);
+      if (out.audioFile) {
+        const { readFileSync: read } = await import('node:fs');
+        const ext = out.audioFile.split('.').pop() ?? 'mp3';
+        await sendVoice(ctx, chat, new Uint8Array(read(out.audioFile)), ext);
+      }
+    } catch (e) {
+      // Javob yetkazilmasa ham transkripsiya saqlanib qoladi
+      return `javob yuborilmadi: ${(e as Error).message}`;
+    }
+  }
+  if (out.intent) ctx.db.run(`UPDATE messages SET handled=1 WHERE id=?`, msg.id);
+  return out.text;
 }
 
 export const voiceModule: Module = {
@@ -131,6 +159,8 @@ export const voiceModule: Module = {
             const text = await transcribeMessage(ctx, m);
             ok++;
             lines.push(`✓ #${m.id} ${m.peer} (${m.duration_sec ?? '?'}s): ${truncate(text, 70)}`);
+            const acted = await actOnVoice(ctx, m, text);
+            if (acted) lines.push(`   ↳ ${truncate(acted.split('\n')[0] ?? '', 70)}`);
           } catch (e) {
             lines.push(`✗ #${m.id} ${m.peer}: ${(e as Error).message.split('\n')[0]}`);
           }
@@ -194,6 +224,8 @@ export const voiceModule: Module = {
           try {
             const text = await transcribeMessage(ctx, m);
             ok++;
+            const acted = await actOnVoice(ctx, m, text);
+            if (acted) continue; // javob allaqachon Telegramga ketdi
             enqueue(ctx, {
               module: 'ovoz',
               title: `Ovozli xabar: ${m.peer}`,

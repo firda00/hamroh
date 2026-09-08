@@ -13,8 +13,10 @@ export type LlmTask =
   | { kind: 'classify'; text: string; labels: string[] }
   /** Faktlar asosida maslahat berish (moliya, marketing, yuridik). */
   | { kind: 'advise'; topic: string; facts: string[]; question?: string }
-  /** Erkin so'rov (bosqich 2'da to'liq ochiladi). */
-  | { kind: 'chat'; system?: string; prompt: string };
+  /** Erkin so'rov. */
+  | { kind: 'chat'; system?: string; prompt: string }
+  /** Odam gapini modul buyrug'iga aylantirish (ovozli buyruqlar uchun). */
+  | { kind: 'route'; text: string; catalog: string };
 
 export type LlmResult = {
   text: string;

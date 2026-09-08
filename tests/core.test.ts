@@ -10,6 +10,10 @@ import { readCsv } from '../src/util/office.ts';
 import { rulesProvider } from '../src/llm/rules.ts';
 import { localProvider } from '../src/llm/local.ts';
 import { buildPrompt, systemFor, stripThinking, matchLabel } from '../src/llm/prompts.ts';
+import { parseUzbekNumber, extractTime, extractWhen, cleanTitle } from '../src/util/uz.ts';
+import { parseLlmRoute } from '../src/intent/index.ts';
+import { splitCommand } from '../src/tts/cmd.ts';
+import { spokenText } from '../src/modules/assistant.ts';
 
 const TZ = 'Asia/Tashkent';
 
@@ -190,4 +194,56 @@ test('lokal provayder: server yiqilsa tushunarli xato', async () => {
     () => llm.run({ kind: 'chat', prompt: 'salom' }),
     (e: Error) => e.message.includes('Lokal model bilan aloqa yo‘q'),
   );
+});
+
+test('o‘zbekcha son: so‘z va raqam aralash', () => {
+  assert.equal(parseUzbekNumber('ikki yuz ming'), 200_000);
+  assert.equal(parseUzbekNumber('besh million'), 5_000_000);
+  assert.equal(parseUzbekNumber('250 ming so‘m'), 250_000);
+  assert.equal(parseUzbekNumber('o‘n ming qadam'), 10_000);
+  assert.equal(parseUzbekNumber('bir yuz yigirma besh ming'), 125_000);
+  assert.equal(parseUzbekNumber('uch yuz'), 300);
+  assert.equal(parseUzbekNumber('salom dunyo'), null);
+});
+
+test('o‘zbekcha vaqt: "soat uchda" tushdan keyin', () => {
+  assert.equal(extractTime('soat uchda'), '15:00');
+  assert.equal(extractTime('soat o‘nda'), '10:00');
+  assert.equal(extractTime('ertalab yettida'), '07:00');
+  assert.equal(extractTime('14:30 da'), '14:30');
+  assert.equal(extractTime('kechqurun to‘qqizda'), '21:00');
+  assert.equal(extractTime('hech qanday vaqt'), null);
+});
+
+test('o‘zbekcha sana: gap ichidan topadi', () => {
+  const now = new Date('2026-09-08T06:00:00.000Z'); // seshanba, Toshkentda 11:00
+  const when = extractWhen('Aziz aka bilan ertaga soat uchda uchrashuv', TZ, now);
+  assert.ok(when);
+  assert.equal(dateKey(when, TZ), '2026-09-09');
+  assert.equal(timeKey(when, TZ), '15:00');
+  assert.equal(extractWhen('shunchaki gap', TZ, now), null);
+});
+
+test('sarlavhadan vaqt so‘zlari olib tashlanadi', () => {
+  assert.equal(cleanTitle('ertaga soat uchda Aziz aka bilan uchrashuv qo‘y', ['uchrashuv', 'qo‘y', 'ertaga']), 'Aziz aka bilan');
+  assert.equal(cleanTitle('juma kuni ikkida yig‘ilish', ['yig‘ilish']), '');
+});
+
+test('LLM javobidan JSON ajratiladi', () => {
+  assert.deepEqual(parseLlmRoute('Mana: {"module":"vazifa","command":"add","args":["x"]} tayyor')?.module, 'vazifa');
+  assert.deepEqual(parseLlmRoute('<think>o‘ylayapman</think>{"module":"bozor","command":"kurs"}')?.command, 'kurs');
+  assert.equal(parseLlmRoute('umuman JSON yo‘q'), null);
+  assert.equal(parseLlmRoute('{buzuq json'), null);
+});
+
+test('TTS buyrug‘i to‘g‘ri bo‘laklanadi', () => {
+  assert.deepEqual(splitCommand('piper -m uz.onnx -f {out}'), ['piper', '-m', 'uz.onnx', '-f', '{out}']);
+  assert.deepEqual(splitCommand('say "bir ikki" -o {out}'), ['say', 'bir ikki', '-o', '{out}']);
+});
+
+test('ovozga yaroqli matn: jadval bezaklari olib tashlanadi', () => {
+  const raw = 'Valyuta  Bugun\n───────  ─────\nUSD      11 789\nEUR      13 702';
+  const spoken = spokenText(raw);
+  assert.ok(!spoken.includes('─'));
+  assert.ok(spoken.includes('USD'));
 });

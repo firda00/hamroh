@@ -44,7 +44,7 @@ Rejalashtirilgan qo‘shimchalar:
       to‘g‘ri modul buyrug‘iga aylantirish (tool-use orqali)
 - [ ] Xarajatlarni avtomatik toifalash (`classify` vazifasi allaqachon interfeysda bor)
 - [ ] Kunlik hisobotga qisqa matnli xulosa
-- [ ] Ovozli buyruq: ovozli xabar → modul buyrug‘i (matn tayyor, tool-use kerak)
+- [x] ~~Ovozli buyruq: ovozli xabar → modul buyrug‘i~~ (bajarildi: `gap` moduli)
 
 ## Bosqich 3 — Tashqi integratsiyalar
 

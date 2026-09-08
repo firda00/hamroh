@@ -1,4 +1,4 @@
-# Ovozli xabarlar → matn (Whisper)
+# Ovoz: eshitish, tushunish, gapirish
 
 Telegramga kelgan ovozli xabar avtomatik matnga o‘giriladi, bazaga yoziladi va
 brifingda ko‘rinadi. Uzun xabarning qisqacha mazmunini ham olish mumkin.
@@ -142,9 +142,112 @@ bir vaqtda ishlab turishi mumkin.
 Server javob bermasa, `ovoz sync` o‘sha xabarni **o‘girilmagan holda qoldiradi** —
 keyingi tikda qayta uriniladi, ma'lumot yo‘qolmaydi.
 
+## Ovozli buyruqlar
+
+Aytilgan gap buyruqqa aylanadi va bajariladi.
+
+```bash
+hamroh gap matn "ertaga soat uchda Aziz aka bilan uchrashuv qo‘y"
+```
+
+```bash
+hamroh gap ovoz ./buyruq.ogg --ovoz
+```
+
+| Buyruq | Nima qiladi |
+| --- | --- |
+| `gap tushun "<gap>"` | Faqat tushunganini ko‘rsatadi, bajarmaydi — sinash uchun |
+| `gap matn "<gap>" [--ovoz]` | Tushunadi va bajaradi; `--ovoz` bilan javobni gapiradi |
+| `gap ovoz <fayl> [--ovoz]` | Audio → matn → buyruq → javob |
+| `gap ayt "<matn>"` | Matnni ovozga aylantiradi (TTS tekshiruvi) |
+| `gap status` | Zanjir holati: eshitish, tushunish, gapirish |
+
+### Qoidaviy rejim nimani tushunadi (LLM'siz)
+
+| Aytasiz | Bajariladi |
+| --- | --- |
+| «ertaga soat uchda Aziz aka bilan uchrashuv qo‘y» | `kalendar add "Aziz aka bilan" --at="2026-09-09 15:00"` |
+| «eslatib qo‘y ertaga o‘nda bankka borish» | `vazifa add "bankka borish" --due=...` |
+| «ikki yuz ming so‘m ovqatga sarfladim» | `moliya out 200000 --cat=ovqat` |
+| «besh million so‘m tushdi» | `moliya in 5000000` |
+| «instagramdan yangi mijoz keldi Nodira 998901234567» | `lid add Nodira --source=instagram --phone=...` |
+| «o‘n ming qadam yurdim» | `soglik log steps 10000` |
+| «bugun rejam qanday» / «dollar kursi» / «ob-havo» / «hisobot» | tegishli so‘rovlar |
+
+Sonlar so‘z bilan ham tushuniladi: «ikki yuz ming», «besh million», «bir yuz yigirma besh ming».
+
+**Soat qoidasi:** «soat uchda» → 15:00. 1–7 orasidagi soatlar kunduzgi deb olinadi
+(«ertalab uchda» desangiz — 03:00). Har doim tushunilgan vaqt javobda ko‘rsatiladi,
+shuning uchun xato darhol ko‘rinadi.
+
+LLM ulansa (`HAMROH_LLM=local` yoki `anthropic`) — qoidalar tushunmagan gaplar modelga
+uzatiladi va u 79 ta buyruqning istalganini tanlashi mumkin.
+
+### Xavfsizlik
+
+Tashqariga chiqadigan buyruqlar **ovozdan avtomatik bajarilmaydi**:
+`telegram send`, `telegram file`, `telegram reply`, `aloqa sms`, `vazifa rm`, `kalendar rm`.
+Ular uchun tasdiq so‘raladi (`--tasdiq`). Sababi oddiy: noto‘g‘ri eshitilgan gap
+begona odamga SMS jo‘natib yubormasligi kerak.
+
+### Telegramda avtomatik ishlashi
+
+```
+HAMROH_VOICE_COMMANDS=1
+```
+
+Shundan keyin Telegramga yuborgan ovozli xabaringiz har 10 daqiqada:
+matnga o‘giriladi → buyruq sifatida bajariladi → javob Telegramga qaytadi
+(TTS yoqilgan bo‘lsa — ovozli javob ham).
+
+## Gapirish (TTS)
+
+Ikki yo‘l bor.
+
+**1) HTTP server** — OpenAI-mos `/audio/speech` (LocalAI, Speaches, openedai-speech):
+
+```
+HAMROH_TTS=http
+HAMROH_TTS_URL=http://127.0.0.1:8000/v1
+HAMROH_TTS_MODEL=tts-1
+HAMROH_TTS_VOICE=alloy
+HAMROH_TTS_FORMAT=ogg
+```
+
+**2) Istalgan dastur** — o‘zbekcha ovoz uchun eng moslashuvchan yo‘l:
+
+```
+HAMROH_TTS=cmd
+HAMROH_TTS_CMD=piper -m uz.onnx -f {out}
+HAMROH_TTS_FORMAT=ogg
+```
+
+`{out}` — yaratiladigan fayl yo‘li, `{text}` — matn (yozilmasa matn stdin orqali beriladi).
+
+### O‘zbekcha ovoz — ochiq masala
+
+Bu yerda vaziyat matndan ham qiyin: **tayyor o‘zbekcha ovozlar deyarli yo‘q**.
+Ko‘pchilik ochiq TTS modellari (Piper, Kokoro, XTTS) o‘zbek tilini qamramaydi.
+
+Amaliy variantlar:
+
+1. **Meta MMS-TTS** — `facebook/mms-tts-uzb` modeli o‘zbek tilini qo‘llab-quvvatlaydi.
+   Kichik Python skript yozib, uni `HAMROH_TTS_CMD` ga ulash mumkin — ovoz sifati
+   o‘rtacha, lekin tushunarli va bepul.
+2. **Mahalliy xizmatlar** — O‘zbekistonda o‘zbekcha TTS beradigan API lar bor
+   (Mohir AI va shunga o‘xshashlar). Ular odatda tabiiyroq eshitiladi, lekin pullik
+   va matn tashqariga chiqadi.
+3. **Ruscha ovoz bilan o‘zbekcha matn** — ishlamaydi, tinglash qiyin. Tavsiya etilmaydi.
+
+Ovoz sifati qoniqarsiz bo‘lsa, TTS ni o‘chirib qo‘ying: matnli javob baribir
+Telegramga keladi va ko‘p hollarda shunisi qulayroq.
+
+### Telegramda «voice message» bo‘lishi uchun
+
+`HAMROH_TTS_FORMAT=ogg` qo‘ying — u holda javob haqiqiy ovozli xabar sifatida ketadi.
+Boshqa formatlarda (mp3, wav) audio fayl sifatida yuboriladi.
+
 ## Hali yo‘q
 
-- **Ovozli buyruq** («ertaga soat 3 da uchrashuv qo‘y» → kalendarga yozish) — matn tayyor,
-  uni buyruqqa aylantirish LLM ulangandan keyin qo‘shiladi ([ROADMAP.md](ROADMAP.md), bosqich 2).
 - Video fayllardan audio ajratish — hozir `video_note` (dumaloq video) qo‘llab-quvvatlanadi,
   oddiy videolar uchun `ffmpeg` bilan oldindan ajratish kerak.

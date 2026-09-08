@@ -63,6 +63,33 @@ export async function downloadFile(ctx: Ctx, fileId: string): Promise<{ bytes: U
   return { bytes: new Uint8Array(await res.arrayBuffer()), name: path.split('/').pop() ?? 'file' };
 }
 
+/** Ovozli javob yuboradi. .ogg bo'lsa haqiqiy "voice message", aks holda audio fayl. */
+export async function sendVoice(ctx: Ctx, chatId: string, bytes: Uint8Array, ext: string, caption?: string): Promise<void> {
+  const isOgg = ext === 'ogg' || ext === 'oga' || ext === 'opus';
+  const form = new FormData();
+  form.append('chat_id', chatId);
+  if (caption) form.append('caption', caption.slice(0, 1000));
+  form.append(
+    isOgg ? 'voice' : 'audio',
+    new Blob([bytes], { type: isOgg ? 'audio/ogg' : 'audio/mpeg' }),
+    `javob.${ext}`,
+  );
+  const res = await fetch(api(ctx, isOgg ? 'sendVoice' : 'sendAudio'), { method: 'POST', body: form });
+  const data = (await res.json()) as TgResp<unknown>;
+  if (!data.ok) throw new Error(`Ovozli javob yuborilmadi: ${data.description ?? res.status}`);
+}
+
+/** Oddiy matnli javob. */
+export async function sendText(ctx: Ctx, chatId: string, text: string): Promise<void> {
+  const res = await fetch(api(ctx, 'sendMessage'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: text.slice(0, 4000) }),
+  });
+  const data = (await res.json()) as TgResp<unknown>;
+  if (!data.ok) throw new Error(`Xabar yuborilmadi: ${data.description ?? res.status}`);
+}
+
 const needToken = (ctx: Ctx): string | null =>
   ctx.cfg.telegram.token
     ? null

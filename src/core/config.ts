@@ -10,6 +10,9 @@ const LLM_KINDS: LlmKind[] = ['rules', 'local', 'anthropic'];
 /** off — ovoz matnga o'girilmaydi · local — o'z Whisper serveringiz. */
 export type SttKind = 'off' | 'local';
 
+/** off — ovozli javob yo'q · http — OpenAI-mos server · cmd — ixtiyoriy dastur. */
+export type TtsKind = 'off' | 'http' | 'cmd';
+
 export type Config = {
   dbPath: string;
   tz: string;
@@ -30,6 +33,16 @@ export type Config = {
   sttLang: string;
   sttKey: string;
   sttHint: string;
+  /** Matnni ovozga aylantirish. */
+  tts: TtsKind;
+  ttsUrl: string;
+  ttsModel: string;
+  ttsVoice: string;
+  ttsFormat: string;
+  ttsKey: string;
+  ttsCmd: string;
+  /** Ovozli xabarlarni buyruq sifatida bajarish. */
+  voiceCommands: boolean;
   extraFeeds: string[];
   telegram: { token: string; chatId: string };
   outDir: string;
@@ -59,6 +72,14 @@ export function loadConfig(): Config {
     sttLang: env('HAMROH_STT_LANG', 'uz'),
     sttKey: env('HAMROH_STT_KEY', 'local'),
     sttHint: env('HAMROH_STT_HINT'),
+    tts: (['http', 'cmd'].includes(env('HAMROH_TTS', 'off')) ? env('HAMROH_TTS') : 'off') as TtsKind,
+    ttsUrl: env('HAMROH_TTS_URL', 'http://127.0.0.1:8000/v1').replace(/[/]+$/, ''),
+    ttsModel: env('HAMROH_TTS_MODEL', 'tts-1'),
+    ttsVoice: env('HAMROH_TTS_VOICE', 'alloy'),
+    ttsFormat: env('HAMROH_TTS_FORMAT', 'mp3'),
+    ttsKey: env('HAMROH_TTS_KEY', 'local'),
+    ttsCmd: env('HAMROH_TTS_CMD'),
+    voiceCommands: env('HAMROH_VOICE_COMMANDS') === '1',
     extraFeeds: env('HAMROH_NEWS_FEEDS').split(',').map((s) => s.trim()).filter(Boolean),
     telegram: { token: env('TELEGRAM_BOT_TOKEN'), chatId: env('TELEGRAM_CHAT_ID') },
     outDir: resolve(env('HAMROH_OUT', './out')),

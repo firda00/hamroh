@@ -87,6 +87,10 @@ export function rulesProvider(): LlmProvider {
           };
         }
 
+        case 'route':
+          // Qoidaviy tanish alohida modulda (src/intent/rules.ts) — bu yerda emas.
+          return { text: '', provider: 'rules' };
+
         case 'chat':
           return {
             text:
