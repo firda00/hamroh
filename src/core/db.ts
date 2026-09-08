@@ -26,12 +26,34 @@ const norm = (params: unknown[]): Param[] =>
     return p as Param;
   });
 
+/**
+ * Ustun qo'shish migratsiyasi.
+ * CREATE TABLE IF NOT EXISTS mavjud jadvalga yangi ustun qo'shmaydi — shuning uchun
+ * sxema o'sganda eski bazalar shu yerda yangilanadi.
+ */
+function addColumns(raw: DatabaseSync, table: string, columns: Record<string, string>): void {
+  const existing = new Set(
+    (raw.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name),
+  );
+  for (const [name, definition] of Object.entries(columns)) {
+    if (!existing.has(name)) raw.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+  }
+}
+
 export function openDb(path: string): Db {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const raw = new DatabaseSync(path);
   if (path !== ':memory:') raw.exec('PRAGMA journal_mode = WAL');
   raw.exec('PRAGMA foreign_keys = ON');
   raw.exec(SCHEMA);
+
+  // Ovozli xabarlar uchun (v0.2)
+  addColumns(raw, 'messages', {
+    media_kind: 'TEXT',
+    media_id: 'TEXT',
+    duration_sec: 'INTEGER',
+    transcribed_at: 'TEXT',
+  });
 
   return {
     raw,

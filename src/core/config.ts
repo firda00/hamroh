@@ -7,6 +7,9 @@ export type LlmKind = 'rules' | 'local' | 'anthropic';
 
 const LLM_KINDS: LlmKind[] = ['rules', 'local', 'anthropic'];
 
+/** off — ovoz matnga o'girilmaydi · local — o'z Whisper serveringiz. */
+export type SttKind = 'off' | 'local';
+
 export type Config = {
   dbPath: string;
   tz: string;
@@ -20,6 +23,13 @@ export type Config = {
   llmUrl: string;
   llmKey: string;
   anthropicKey: string;
+  /** Ovozni matnga o'girish (Whisper). */
+  stt: SttKind;
+  sttUrl: string;
+  sttModel: string;
+  sttLang: string;
+  sttKey: string;
+  sttHint: string;
   extraFeeds: string[];
   telegram: { token: string; chatId: string };
   outDir: string;
@@ -43,6 +53,12 @@ export function loadConfig(): Config {
     llmUrl: env('HAMROH_LLM_URL', 'http://127.0.0.1:11434/v1').replace(/\/+$/, ''),
     llmKey: env('HAMROH_LLM_KEY', 'local'),
     anthropicKey: env('ANTHROPIC_API_KEY'),
+    stt: env('HAMROH_STT', 'off') === 'local' ? 'local' : 'off',
+    sttUrl: env('HAMROH_STT_URL', 'http://127.0.0.1:8000/v1').replace(/\/+$/, ''),
+    sttModel: env('HAMROH_STT_MODEL', 'Systran/faster-whisper-large-v3'),
+    sttLang: env('HAMROH_STT_LANG', 'uz'),
+    sttKey: env('HAMROH_STT_KEY', 'local'),
+    sttHint: env('HAMROH_STT_HINT'),
     extraFeeds: env('HAMROH_NEWS_FEEDS').split(',').map((s) => s.trim()).filter(Boolean),
     telegram: { token: env('TELEGRAM_BOT_TOKEN'), chatId: env('TELEGRAM_CHAT_ID') },
     outDir: resolve(env('HAMROH_OUT', './out')),

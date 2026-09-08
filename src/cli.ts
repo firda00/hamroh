@@ -108,6 +108,14 @@ async function main(argv: string[]): Promise<number> {
           : `
              server ✗ ${ctx.cfg.llmUrl} — ${st.error}`;
       }
+      let sttLine = ctx.stt.enabled ? ctx.stt.id : 'o‘chirilgan (HAMROH_STT=off)';
+      if (ctx.stt.enabled) {
+        const { sttStatus } = await import('./stt/local.ts');
+        const st = await sttStatus(ctx.cfg.sttUrl, ctx.cfg.sttKey);
+        sttLine += st.ok ? `
+             server ✓ ${ctx.cfg.sttUrl}` : `
+             server ✗ ${ctx.cfg.sttUrl} — ${st.error}`;
+      }
       const lines = [
         `Vaqt:        ${stamp(ctx.now, ctx.cfg.tz)} (${ctx.cfg.tz})`,
         `Baza:        ${ctx.cfg.dbPath} ${existsSync(ctx.cfg.dbPath) ? '✓' : '(yangi yaratiladi)'}`,
@@ -115,6 +123,7 @@ async function main(argv: string[]): Promise<number> {
         `Valyuta:     ${ctx.cfg.currency}`,
         `Internet:    ${ctx.cfg.offline ? 'o‘chirilgan (HAMROH_OFFLINE=1)' : 'ruxsat berilgan'}`,
         `LLM:         ${llmLine}`,
+        `Ovoz (STT):  ${sttLine}`,
         `Telegram:    ${ctx.cfg.telegram.token ? 'token bor' : 'ulanmagan'}`,
         `Modullar:    ${modules.length} ta`,
         `Vazifalar:   ${allJobs(modules).length} ta cron`,

@@ -44,6 +44,7 @@ Rejalashtirilgan qo‘shimchalar:
       to‘g‘ri modul buyrug‘iga aylantirish (tool-use orqali)
 - [ ] Xarajatlarni avtomatik toifalash (`classify` vazifasi allaqachon interfeysda bor)
 - [ ] Kunlik hisobotga qisqa matnli xulosa
+- [ ] Ovozli buyruq: ovozli xabar → modul buyrug‘i (matn tayyor, tool-use kerak)
 
 ## Bosqich 3 — Tashqi integratsiyalar
 
@@ -59,7 +60,7 @@ Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 - [ ] **2GIS** — statistika eksporti
 - [ ] **Sog‘liq** — Google Fit / Apple Health
 - [ ] **PDF** — headless brauzer orqali to‘g‘ridan-to‘g‘ri PDF
-- [ ] **Ovozli xabar** — Telegram audio → matn
+- [x] ~~**Ovozli xabar** — Telegram audio → matn~~ (bajarildi: `ovoz` moduli, [VOICE.md](VOICE.md))
 
 ## Bosqich 4 — Interfeys
 

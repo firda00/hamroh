@@ -90,6 +90,7 @@ npm run hamroh -- kun --html
 | `lid` | (8) Lidlar, Excel | `hamroh lid export --today` |
 | `hujjat` | (9) PDF/Word/taqdimot | `hamroh hujjat word "Shartnoma" --from=matn.md` |
 | `telegram` | (10) Telegram | `hamroh telegram send "Salom"` |
+| `ovoz` | (10) Ovoz → matn | `hamroh ovoz sync` |
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa calls --missed` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |
@@ -136,6 +137,18 @@ HAMROH_LLM_MODEL=qwen3:14b
 Model tanlash, VRAM hisobi va narx solishtiruvi: [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md).
 Modelning o‘zbekcha sifatini tekshirish: `npm run eval`.
 
+**Ovozli xabarlar** (Whisper, LLM dan mustaqil — alohida yoqiladi):
+
+```
+HAMROH_STT=local
+HAMROH_STT_URL=http://127.0.0.1:8000/v1
+HAMROH_STT_MODEL=Systran/faster-whisper-large-v3
+HAMROH_STT_LANG=uz
+```
+
+Telegram ovozli xabarlari har 10 daqiqada matnga o‘giriladi. O‘rnatish va o‘zbekcha
+aniqligini oshirish: [docs/VOICE.md](docs/VOICE.md).
+
 **Claude API:**
 
 ```bash
@@ -181,6 +194,7 @@ npm test && npm run typecheck
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
+- [docs/VOICE.md](docs/VOICE.md) — ovozli xabarlarni matnga o‘girish (Whisper)
 
 ## Litsenziya
 

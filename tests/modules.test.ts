@@ -6,6 +6,7 @@ import { readFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { openDb } from '../src/core/db.ts';
 import type { Ctx } from '../src/core/types.ts';
 import { rulesProvider } from '../src/llm/rules.ts';
+import { disabledStt } from '../src/stt/provider.ts';
 import { loadConfig } from '../src/core/config.ts';
 import { totals, savingTips } from '../src/modules/finance.ts';
 import { dayKpis, weakSpots } from '../src/modules/report.ts';
@@ -22,7 +23,7 @@ const NOW = new Date('2026-09-08T06:00:00.000Z'); // Toshkentda 11:00
 function ctxFor(): Ctx {
   process.env['HAMROH_DB'] = ':memory:';
   const cfg = { ...loadConfig(), dbPath: ':memory:', tz: 'Asia/Tashkent', currency: 'UZS', offline: true };
-  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), now: NOW };
+  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), now: NOW };
 }
 
 const iso = (daysAgo: number, h = 12): string =>
@@ -151,4 +152,81 @@ test('zip: crc32 va OOXML paketlari haqiqiy', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('ovoz: Whisper serveriga multipart yuboriladi va matn qaytadi', async () => {
+  const { createServer } = await import('node:http');
+  const { localStt } = await import('../src/stt/local.ts');
+
+  let seenModel = '';
+  let seenLang = '';
+  let sawFile = false;
+  const server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (c) => chunks.push(c as Buffer));
+    req.on('end', () => {
+      const body = Buffer.concat(chunks).toString('latin1');
+      sawFile = body.includes('name="file"') && body.includes('filename="voice.ogg"');
+      seenModel = body.match(/name="model"\r?\n\r?\n(.+)/)?.[1]?.trim() ?? '';
+      seenLang = body.match(/name="language"\r?\n\r?\n(.+)/)?.[1]?.trim() ?? '';
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ text: '  Ertaga soat uchda uchrashuv bor  ', language: 'uz', duration: 4.2 }));
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as { port: number }).port;
+
+  try {
+    const stt = localStt({ url: `http://127.0.0.1:${port}/v1`, model: 'faster-whisper-large-v3', language: 'uz' });
+    assert.equal(stt.enabled, true);
+    const out = await stt.transcribe(new Uint8Array([1, 2, 3, 4]), 'voice.ogg');
+    assert.equal(out.text, 'Ertaga soat uchda uchrashuv bor');
+    assert.equal(out.language, 'uz');
+    assert.equal(out.durationSec, 4.2);
+    assert.ok(sawFile, 'fayl multipart ichida yuborilmadi');
+    assert.equal(seenModel, 'faster-whisper-large-v3');
+    assert.equal(seenLang, 'uz');
+  } finally {
+    server.close();
+  }
+});
+
+test('ovoz: server yiqilsa tushunarli xato', async () => {
+  const { localStt } = await import('../src/stt/local.ts');
+  const stt = localStt({ url: 'http://127.0.0.1:1/v1', model: 'x', language: 'uz', timeoutMs: 1500 });
+  await assert.rejects(
+    () => stt.transcribe(new Uint8Array([0]), 'a.ogg'),
+    (e: Error) => e.message.includes('Whisper serveri bilan aloqa yo‘q'),
+  );
+});
+
+test('ovoz: o‘chirilganda yo‘riqnoma beradi', async () => {
+  const stt = disabledStt();
+  assert.equal(stt.enabled, false);
+  await assert.rejects(
+    () => stt.transcribe(new Uint8Array([0]), 'a.ogg'),
+    (e: Error) => e.message.includes('HAMROH_STT') && e.message.includes('docs/VOICE.md'),
+  );
+});
+
+test('ovoz: navbat faqat o‘girilmagan audio xabarlarni oladi', async () => {
+  const ctx = ctxFor();
+  const { pendingVoice } = await import('../src/modules/voice.ts');
+  const add = (kind: string | null, mediaId: string | null, done: string | null): void => {
+    ctx.db.run(
+      `INSERT INTO messages(ts, channel, direction, peer, body, media_kind, media_id, transcribed_at)
+       VALUES(?,?,?,?,?,?,?,?)`,
+      iso(0), 'telegram', 'in', 'Aziz', '[voice]', kind, mediaId, done,
+    );
+  };
+  add('voice', 'f1', null); // olinishi kerak
+  add('audio', 'f2', null); // olinishi kerak
+  add('voice', 'f3', '2026-09-08T10:00:00.000Z'); // allaqachon o'girilgan
+  add('photo', 'f4', null); // audio emas
+  add('voice', null, null); // media_id yo'q
+
+  const items = pendingVoice(ctx, 10);
+  assert.equal(items.length, 2);
+  assert.deepEqual(items.map((m) => m.media_id).sort(), ['f1', 'f2']);
+  ctx.db.close();
 });

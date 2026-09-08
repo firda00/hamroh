@@ -188,8 +188,23 @@ LLM ulangach to‘liq ssenariy yoziladi.
 `.env` da `TELEGRAM_BOT_TOKEN` va `TELEGRAM_CHAT_ID` kerak (@BotFather beradi).
 Token qo‘yilsa, barcha eslatmalar avtomatik Telegramga boradi.
 
-**◐ Audio/video:** kelgan ovozli xabar `[audio]` deb qayd qilinadi; **matnga o‘girish**
-transkripsiya xizmatini talab qiladi — bosqich 3.
+### Ovoz → matn — ✅
+
+**Modul:** `ovoz` (Whisper orqali)
+
+| Buyruq | Nima qiladi |
+| --- | --- |
+| `hamroh ovoz status` | Whisper serveri holati |
+| `hamroh ovoz fayl ./yozuv.ogg` | Lokal audio faylni matnga o‘girish |
+| `hamroh ovoz sync` | Telegramdan kelgan ovozli xabarlarni o‘girish |
+| `hamroh ovoz xulosa 12` | Uzun xabarning qisqacha mazmuni (LLM kerak) |
+
+Har 10 daqiqada avtomatik ishlaydi. Ovoz LLM ga emas, faqat Whisper serveriga boradi —
+server sizniki bo‘lsa, yozuv mashinadan chiqmaydi. O‘zbekcha aniqligini oshirish
+bo‘yicha: [VOICE.md](VOICE.md).
+
+**◐ Ovozli buyruq** («ertaga 3 da uchrashuv qo‘y» → kalendarga yozish) — matn tayyor,
+uni buyruqqa aylantirish LLM ulangandan keyin (bosqich 2).
 
 ---
 

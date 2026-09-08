@@ -22,8 +22,10 @@ type TgUpdate = {
     chat: { id: number; title?: string; username?: string; first_name?: string };
     from?: { username?: string; first_name?: string };
     document?: { file_name: string; file_id: string };
-    voice?: { file_id: string; duration: number };
-    video?: { file_id: string };
+    voice?: { file_id: string; duration?: number };
+    audio?: { file_id: string; duration?: number; file_name?: string };
+    video?: { file_id: string; duration?: number };
+    video_note?: { file_id: string; duration?: number };
     photo?: { file_id: string }[];
   };
 };
@@ -31,6 +33,35 @@ type TgUpdate = {
 type TgResp<T> = { ok: boolean; result: T; description?: string };
 
 const api = (ctx: Ctx, method: string): string => `https://api.telegram.org/bot${ctx.cfg.telegram.token}/${method}`;
+
+export type Media = { kind: string; fileId: string; name: string; durationSec: number };
+
+/** Xabardan media ma'lumotini ajratadi (ovoz, video-xabar, audio fayl). */
+export function mediaOf(m: NonNullable<TgUpdate['message']>): Media | null {
+  if (m.voice) return { kind: 'voice', fileId: m.voice.file_id, name: 'voice.ogg', durationSec: m.voice.duration ?? 0 };
+  if (m.video_note) return { kind: 'video_note', fileId: m.video_note.file_id, name: 'note.mp4', durationSec: m.video_note.duration ?? 0 };
+  if (m.audio) return { kind: 'audio', fileId: m.audio.file_id, name: m.audio.file_name ?? 'audio.mp3', durationSec: m.audio.duration ?? 0 };
+  if (m.video) return { kind: 'video', fileId: m.video.file_id, name: 'video.mp4', durationSec: m.video.duration ?? 0 };
+  if (m.document) return { kind: 'document', fileId: m.document.file_id, name: m.document.file_name, durationSec: 0 };
+  if (m.photo?.length) return { kind: 'photo', fileId: m.photo[m.photo.length - 1]!.file_id, name: 'photo.jpg', durationSec: 0 };
+  return null;
+}
+
+/** Telegram serveridan faylni yuklab oladi. */
+export async function downloadFile(ctx: Ctx, fileId: string): Promise<{ bytes: Uint8Array; name: string }> {
+  const info = await fetchJson<TgResp<{ file_path?: string }>>(
+    `${api(ctx, 'getFile')}?file_id=${encodeURIComponent(fileId)}`,
+    { offline: ctx.cfg.offline },
+  );
+  const path = info.result?.file_path;
+  if (!info.ok || !path) throw new Error(`Fayl yo‘lini olib bo‘lmadi: ${info.description ?? fileId}`);
+
+  const res = await fetch(`https://api.telegram.org/file/bot${ctx.cfg.telegram.token}/${path}`, {
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) throw new Error(`Fayl yuklanmadi: HTTP ${res.status}`);
+  return { bytes: new Uint8Array(await res.arrayBuffer()), name: path.split('/').pop() ?? 'file' };
+}
 
 const needToken = (ctx: Ctx): string | null =>
   ctx.cfg.telegram.token
@@ -129,17 +160,22 @@ export const telegramModule: Module = {
           last = Math.max(last, u.update_id);
           const m = u.message;
           if (!m) continue;
-          const kind = m.voice ? '[audio]' : m.document ? `[fayl: ${m.document.file_name}]` : m.video ? '[video]' : m.photo ? '[rasm]' : '';
-          const body = [kind, m.text ?? m.caption ?? ''].filter(Boolean).join(' ').trim() || '(bo‘sh)';
+          const media = mediaOf(m);
+          const mark = media ? `[${media.kind}${media.durationSec ? ` ${media.durationSec}s` : ''}]` : '';
+          const body = [mark, m.text ?? m.caption ?? ''].filter(Boolean).join(' ').trim() || '(bo‘sh)';
           const peer = m.chat.title ?? m.from?.username ?? m.from?.first_name ?? String(m.chat.id);
           ctx.db.run(
-            `INSERT INTO messages(ts, channel, direction, peer, body, handled, external_id) VALUES(?,?,?,?,?,0,?)`,
+            `INSERT INTO messages(ts, channel, direction, peer, body, handled, external_id, media_kind, media_id, duration_sec)
+             VALUES(?,?,?,?,?,0,?,?,?,?)`,
             new Date(m.date * 1000).toISOString(),
             'telegram',
             'in',
             peer,
             body,
             String(m.message_id),
+            media?.kind ?? null,
+            media?.fileId ?? null,
+            media?.durationSec ?? null,
           );
           lines.push(`${stamp(new Date(m.date * 1000), ctx.cfg.tz).slice(5)} ${peer}: ${truncate(body, 60)}  (chat_id: ${m.chat.id})`);
         }
@@ -206,14 +242,19 @@ export const telegramModule: Module = {
           last = Math.max(last, u.update_id);
           const m = u.message;
           if (!m) continue;
+          const media = mediaOf(m);
           ctx.db.run(
-            `INSERT INTO messages(ts, channel, direction, peer, body, handled, external_id) VALUES(?,?,?,?,?,0,?)`,
+            `INSERT INTO messages(ts, channel, direction, peer, body, handled, external_id, media_kind, media_id, duration_sec)
+             VALUES(?,?,?,?,?,0,?,?,?,?)`,
             new Date(m.date * 1000).toISOString(),
             'telegram',
             'in',
             m.chat.title ?? m.from?.username ?? String(m.chat.id),
-            m.text ?? m.caption ?? '(media)',
+            m.text ?? m.caption ?? (media ? `[${media.kind}]` : '(media)'),
             String(m.message_id),
+            media?.kind ?? null,
+            media?.fileId ?? null,
+            media?.durationSec ?? null,
           );
         }
         setting.set(ctx.db, 'telegram:offset', String(last));
