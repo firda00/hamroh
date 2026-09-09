@@ -42,7 +42,7 @@ Rejalashtirilgan qo‘shimchalar:
 
 - [ ] Tabiiy tilda buyruq: `hamroh ask "ertaga soat 3 da Aziz aka bilan uchrashuv qo'y"` →
       to‘g‘ri modul buyrug‘iga aylantirish (tool-use orqali)
-- [ ] Xarajatlarni avtomatik toifalash (`classify` vazifasi allaqachon interfeysda bor)
+- [x] ~~Xarajatlarni avtomatik toifalash~~ (kalit so‘zlar + LLM: `moliya out 250k taksiga`)
 - [ ] Kunlik hisobotga qisqa matnli xulosa
 - [x] ~~Ovozli buyruq: ovozli xabar → modul buyrug‘i~~ (bajarildi: `gap` moduli)
 

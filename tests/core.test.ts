@@ -284,3 +284,34 @@ test('gaplarga bo‘lish: pauza qo‘yish uchun', () => {
   assert.equal(s.length, 3);
   assert.equal(s[2], 'Uchinchi.');
 });
+
+test('.env tahriri: mavjud qiymat almashadi, izohlar saqlanadi', async () => {
+  const { applyEnv, readEnvValue, quoteIfNeeded } = await import('../src/util/env.ts');
+
+  const before = [
+    '# Umumiy sozlamalar',
+    'HAMROH_CITY=Tashkent',
+    '',
+    '# Telegram',
+    '# TELEGRAM_BOT_TOKEN=',
+    'HAMROH_LLM=rules                  # rules | local | anthropic',
+  ].join('\n');
+
+  const after = applyEnv(before, {
+    HAMROH_CITY: 'Samarqand',
+    TELEGRAM_BOT_TOKEN: '123:ABC',
+    HAMROH_STT: 'local',
+    HAMROH_LLM: undefined, // tegilmasin
+  });
+
+  assert.ok(after.includes('# Umumiy sozlamalar'), 'izoh yo‘qoldi');
+  assert.equal(readEnvValue(after, 'HAMROH_CITY'), 'Samarqand');
+  assert.equal(readEnvValue(after, 'TELEGRAM_BOT_TOKEN'), '123:ABC', 'izohlangan kalit tiklanishi kerak');
+  assert.equal(readEnvValue(after, 'HAMROH_STT'), 'local', 'yangi kalit qo‘shilishi kerak');
+  assert.equal(readEnvValue(after, 'HAMROH_LLM'), 'rules', 'tegilmagan kalit o‘zgarmasligi kerak');
+  assert.equal(after.match(/^HAMROH_CITY=/gm)?.length, 1, 'kalit ikki marta yozilmasligi kerak');
+
+  assert.equal(quoteIfNeeded('oddiy'), 'oddiy');
+  assert.equal(quoteIfNeeded('bo shliq bor'), '"bo shliq bor"');
+  assert.equal(readEnvValue('K="ikki so\'z"', 'K'), "ikki so'z");
+});

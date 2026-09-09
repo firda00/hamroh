@@ -3,6 +3,7 @@ import { parseArgs, parseAmount } from '../core/args.ts';
 import { dateKey, monthKey, prevMonth, startOfDay, startOfMonth, parseWhen } from '../util/date.ts';
 import { money, table, growth, bar, compact } from '../util/fmt.ts';
 import { readCsv } from '../util/office.ts';
+import { detectCategory, EXPENSE_CATEGORIES } from '../util/categories.ts';
 import { readFileSync } from 'node:fs';
 
 /** (5) Shaxsiy moliya: kirim-chiqim, byudjet, tejash maslahatlari. */
@@ -86,12 +87,31 @@ export function savingTips(ctx: Ctx, period: string): string[] {
   return tips;
 }
 
-function addEntry(ctx: Ctx, kind: 'income' | 'expense', argv: string[]) {
+/**
+ * Toifani aniqlash: avval kalit so'zlar (tez, bepul), topilmasa — LLM (ulangan bo'lsa).
+ * Shu sabab "250 ming taksiga" deyilganda ham to'g'ri toifa tushadi.
+ */
+async function pickCategory(ctx: Ctx, note: string, kind: 'income' | 'expense'): Promise<string> {
+  if (kind === 'income') return 'savdo';
+  const byWords = detectCategory(note);
+  if (byWords !== 'boshqa' || !ctx.llm.smart || !note.trim()) return byWords;
+
+  try {
+    const res = await ctx.llm.run({ kind: 'classify', text: note, labels: [...EXPENSE_CATEGORIES] });
+    return res.label && (res.confidence ?? 0) >= 0.5 ? res.label : 'boshqa';
+  } catch {
+    return 'boshqa';
+  }
+}
+
+async function addEntry(ctx: Ctx, kind: 'income' | 'expense', argv: string[]) {
   const a = parseArgs(argv);
   const amount = parseAmount(a.at(0));
   if (!amount) return { text: `Summa kerak. Masalan: moliya ${kind === 'income' ? 'in' : 'out'} 250000 --cat=ovqat` };
   const whenRaw = a.str('date');
   const when = whenRaw ? parseWhen(whenRaw, ctx.cfg.tz, ctx.now) ?? ctx.now : ctx.now;
+  const note = a.rest(1) || a.str('note') || '';
+  const category = a.str('cat') || (await pickCategory(ctx, note, kind));
 
   const r = ctx.db.run(
     `INSERT INTO ledger(ts, kind, amount, currency, category, counterparty, note, source, necessity)
@@ -100,14 +120,14 @@ function addEntry(ctx: Ctx, kind: 'income' | 'expense', argv: string[]) {
     kind,
     amount,
     a.str('cur', ctx.cfg.currency),
-    a.str('cat', kind === 'income' ? 'savdo' : 'boshqa'),
+    category,
     a.str('who') || null,
-    a.rest(1) || a.str('note') || null,
+    note || null,
     'manual',
     a.str('need', 'kerak'),
   );
   const sign = kind === 'income' ? '+' : '−';
-  return { text: `${sign} ${money(amount, ctx.cfg.currency)} yozildi (#${r.lastInsertRowid}, ${a.str('cat', kind === 'income' ? 'savdo' : 'boshqa')})` };
+  return { text: `${sign} ${money(amount, ctx.cfg.currency)} yozildi (#${r.lastInsertRowid}, ${category})` };
 }
 
 export const financeModule: Module = {

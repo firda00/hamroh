@@ -3,6 +3,7 @@ import type { Intent } from './types.ts';
 import { needsConfirmation } from './types.ts';
 import { parseUzbekNumber, extractWhen, cleanTitle } from '../util/uz.ts';
 import { stamp } from '../util/date.ts';
+import { detectCategory } from '../util/categories.ts';
 
 /**
  * Qoidaviy buyruq tanuvchi — LLM'siz ishlaydi.
@@ -237,20 +238,6 @@ const RULES: Rule[] = [
   },
 ];
 
-function detectCategory(text: string): string {
-  const t = text.toLowerCase();
-  const map: [RegExp, string][] = [
-    [/ovqat|tushlik|nonushta|restoran|kafe|yeg/, 'ovqat'],
-    [/benzin|yoqilg‘i|yoqilgi|taksi|transport|mashina/, 'transport'],
-    [/arenda|ijara|ofis/, 'arenda'],
-    [/reklama|targ‘ibot|targibot|instagram|ads/, 'reklama'],
-    [/kommunal|svet|gaz|suv puli|internet/, 'kommunal'],
-    [/maosh|oylik|xodim/, 'maosh'],
-    [/soliq|buxgalter/, 'soliq'],
-  ];
-  for (const [re, cat] of map) if (re.test(t)) return cat;
-  return 'boshqa';
-}
 
 /** Matndan buyruq aniqlash. Tushunmasa null. */
 export function routeByRules(ctx: Ctx, text: string): Intent | null {

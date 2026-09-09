@@ -346,3 +346,77 @@ test('qo‘ng‘iroq: o‘chirilganda va ruxsatsiz raqamda tushunarli xato', asy
   assert.equal(row?.n, 1, 'chiquvchi qo‘ng‘iroq tarixga yozilishi kerak');
   ctx.db.close();
 });
+
+test('sozlash ustasi: javoblar .env ga to‘g‘ri yoziladi', async () => {
+  const { runWizard } = await import('../src/modules/setup.ts');
+  const { readEnvValue } = await import('../src/util/env.ts');
+  const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  const dir = mkdtempSync(join(tmpdir(), 'hamroh-setup-'));
+  const envPath = join(dir, '.env');
+  writeFileSync(envPath, '# izoh\nHAMROH_CITY=Tashkent\nHAMROH_LLM=rules\n');
+
+  const ctx = ctxFor();
+  // Savollar tartibi bo'yicha javoblar (tarmoqqa chiqadigan yo'llar chetlab o'tiladi)
+  const answers = [
+    'Samarqand',        // shahar
+    'Asia/Tashkent',    // vaqt zonasi
+    'UZS',              // valyuta
+    '',                 // telegram token — o'tkazib yuboriladi
+    'rules',            // LLM
+    'yo‘q',             // STT kerak emas
+    '901234567',        // telefon raqami
+  ];
+  let i = 0;
+  const asked: string[] = [];
+  const ask = async (q: string, current = ''): Promise<string> => {
+    asked.push(q);
+    return answers[i++] ?? current;
+  };
+
+  try {
+    const notes = await runWizard(ctx, ask, () => {}, envPath);
+    const after = readFileSync(envPath, 'utf8');
+
+    assert.equal(readEnvValue(after, 'HAMROH_CITY'), 'Samarqand');
+    assert.equal(readEnvValue(after, 'HAMROH_STT'), 'off');
+    assert.equal(readEnvValue(after, 'HAMROH_TEL_MY_NUMBER'), '+998901234567', 'raqam normallashishi kerak');
+    assert.ok(after.includes('# izoh'), 'izohlar saqlanishi kerak');
+    assert.equal(readEnvValue(after, 'TELEGRAM_BOT_TOKEN'), '', 'bo‘sh token yozilmasligi kerak');
+    assert.ok(notes.some((n) => n.includes('CALLS.md')), 'telefon bo‘yicha eslatma berilishi kerak');
+    assert.equal(asked.length, answers.length, `savollar soni: ${asked.join(' | ')}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    ctx.db.close();
+  }
+});
+
+test('moliya: toifa matndan avtomatik aniqlanadi', async () => {
+  const ctx = ctxFor();
+  const { financeModule } = await import('../src/modules/finance.ts');
+  const out = financeModule.commands.find((c) => c.name === 'out');
+  assert.ok(out);
+
+  const cases: [string[], string][] = [
+    [['250000', 'taksiga', 'berdim'], 'transport'],
+    [['1200000', 'ofis', 'arendasi'], 'arenda'],
+    [['90000', 'dorixonadan', 'dori'], 'sogliq'],
+    [['300000', 'instagram', 'reklamasi'], 'reklama'],
+    [['70000', 'tushunarsiz', 'narsa'], 'boshqa'],
+    [['500000', '--cat=maxsus', 'qo‘lda'], 'maxsus'],
+  ];
+
+  for (const [args, expected] of cases) {
+    await out.run(ctx, args);
+    const row = ctx.db.get<{ category: string }>(`SELECT category FROM ledger ORDER BY id DESC LIMIT 1`);
+    assert.equal(row?.category, expected, `"${args.join(' ')}" -> ${row?.category}`);
+  }
+
+  // Kirim har doim savdo
+  const inCmd = financeModule.commands.find((c) => c.name === 'in');
+  await inCmd?.run(ctx, ['1000000', 'kurs to‘lovi']);
+  assert.equal(ctx.db.get<{ category: string }>(`SELECT category FROM ledger ORDER BY id DESC LIMIT 1`)?.category, 'savdo');
+  ctx.db.close();
+});

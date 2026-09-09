@@ -28,7 +28,16 @@ git clone https://github.com/firda00/hamroh.git && cd hamroh
 ```
 
 ```bash
-cp .env.example .env && npm run seed
+npm run sozlash
+```
+
+Savol-javob bilan `.env` to‘ldiriladi va ulanishlar darhol tekshiriladi
+(Telegram tokeni, model serveri). Har savolda Enter — joriy qiymat qoladi.
+
+Namuna ma’lumot bilan ko‘rish uchun:
+
+```bash
+npm run seed
 ```
 
 ```bash
@@ -84,7 +93,7 @@ npm run hamroh -- kun --html
 | `vazifa` | (3) Vazifa va eslatma | `hamroh vazifa add "Bankka borish" --due="ertaga 10:00"` |
 | `kalendar` | (4) Uchrashuvlar | `hamroh kalendar add "Investor" --at="ertaga 15:00"` |
 | `hisobot` | (5) Kunlik hisobot | `hamroh hisobot kun --html` |
-| `moliya` | (5) Kirim-chiqim | `hamroh moliya out 250k --cat=ovqat --need=kerakmas` |
+| `moliya` | (5) Kirim-chiqim | `hamroh moliya out 250k taksiga` (toifa o‘zi aniqlanadi) |
 | `buxgalter` | (6) Buxgalteriya | `hamroh buxgalter list` |
 | `yurist` | (7) Yuridik | `hamroh yurist check` |
 | `lid` | (8) Lidlar, Excel | `hamroh lid export --today` |
@@ -94,6 +103,7 @@ npm run hamroh -- kun --html
 | `gap` | Ovozli buyruq, suhbat | `hamroh gap matn "ertaga uchda uchrashuv qo‘y"` |
 | `bot` | Telegram bot | `npm run bot` |
 | `qongiroq` | Telefon qo‘ng‘irog‘i | `hamroh qongiroq brifing` |
+| `sozlash` | Sozlash ustasi | `npm run sozlash` |
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa calls --missed` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |

@@ -24,6 +24,14 @@ Mavjud `.env` va ma'lumotlar bazasiga **tegilmaydi** — skriptni qayta ishga tu
 
 ## Keyingi qadam
 
+Sozlash ustasi bilan (tavsiya etiladi — tokenlarni darhol tekshiradi):
+
+```bash
+sudo -u hamroh node /opt/hamroh/src/cli.ts sozlash start
+```
+
+Yoki qo‘lda:
+
 ```bash
 sudo nano /opt/hamroh/.env
 ```
