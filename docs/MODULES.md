@@ -245,14 +245,17 @@ alohida ogohlantirish keladi; kechikkanlari brifingda qizil qator bo‘lib turad
 
 ---
 
-## 13. Marketing analitikasi — ✅ / ◐
+## 13. Marketing analitikasi — ✅
 
 **Modul:** `marketing` (Instagram, Google Ads, 2GIS, Google Business Profile, YouTube)
 
 | Buyruq | Nima qiladi |
 | --- | --- |
-| `hamroh marketing set instagram reach 15400` | Ko‘rsatkich kiritish |
-| `hamroh marketing import ./instagram.csv` | CSV eksportini yuklash |
+| `hamroh marketing manbalar` | Qaysi platforma ulangan |
+| `hamroh marketing ulash` | Google uchun rozilik havolasi (Ads + YouTube + Business) |
+| `hamroh marketing sync --days=7` | **Rasmiy API'lardan yig‘ish** |
+| `hamroh marketing import ./2gis.csv` | CSV eksportini yuklash |
+| `hamroh marketing set instagram reach 15400` | Qo‘lda kiritish |
 | `hamroh marketing report --days=30 --html` | Tahlil + diagrammali HTML hisobot |
 | `hamroh marketing advise` | O‘sish uchun tavsiyalar |
 
@@ -260,9 +263,12 @@ Hisobotda: platformalar kesimi (auditoriya, bosish, lid, qo‘ng‘iroq, xarajat
 o‘zgarishi, CPL, CTR, konversiya, lidlar va xarajat dinamikasi (chiziqli diagramma).
 HTML fayl chop etishga tayyor — `Ctrl+P` bilan PDF bo‘ladi.
 
-**◐ Avtomatik yig‘ish:** har bir platformaning API si alohida OAuth/kalit talab qiladi
-(Instagram Graph, Google Ads API, YouTube Data API). Bosqich 3 da ulanadi; interfeys
-tayyor — ma’lumot bir xil jadvalga tushadi.
+**Avtomatik yig‘ish** ([MARKETING.md](MARKETING.md)): Instagram Graph, Google Ads,
+YouTube Analytics va Business Profile Performance — rasmiy API'lar orqali, har kuni
+06:30 da. Bitta platforma ishlamasa qolganlari to‘xtamaydi.
+
+Skrejping ataylab yo‘q: u platformalarning shartlarini buzadi va hisobni bloklashga
+olib keladi. 2GIS ochiq API bermaydi — u yerda CSV import.
 
 ---
 

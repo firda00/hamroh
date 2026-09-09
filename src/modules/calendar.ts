@@ -6,7 +6,7 @@ import { fetchText } from '../util/http.ts';
 import { enqueue } from './notify.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { syncGcal, pushEvent, removeEvent } from './calendar-sync.ts';
-import { consentUrl, exchangeCode } from '../gcal/auth.ts';
+import { consentUrl, exchangeCode } from '../google/auth.ts';
 import { createServer } from 'node:http';
 
 /** (4) Kalendar: uchrashuvlar, bo'sh vaqt, ICS import. */

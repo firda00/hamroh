@@ -5,7 +5,7 @@ import type { Ctx } from '../core/types.ts';
 import { applyEnv } from '../util/env.ts';
 import { parseWhen } from '../util/date.ts';
 import { parseAmount } from '../core/args.ts';
-import { consentUrl, exchangeCode } from '../gcal/auth.ts';
+import { consentUrl, exchangeCode, CALENDAR_SCOPE, MARKETING_SCOPES } from '../google/auth.ts';
 import { makeGcal } from '../gcal/index.ts';
 import { loadConfig } from '../core/config.ts';
 import { detectCategory } from '../util/categories.ts';
@@ -158,7 +158,13 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
       back(res, '/sozlama', undefined, 'GOOGLE_CLIENT_ID o‘rnatilmagan');
       return true;
     }
-    redirect(res, consentUrl(ctx.cfg.googleClientId, redirectUri(ctx, req)));
+    // ?scope=marketing — Ads/YouTube/Business Profile ham so'raladi.
+    // Standart holatda faqat kalendar: keraksiz ruxsat so'ralmaydi.
+    const scopes =
+      url.searchParams.get('scope') === 'marketing'
+        ? [CALENDAR_SCOPE, ...MARKETING_SCOPES]
+        : [CALENDAR_SCOPE];
+    redirect(res, consentUrl(ctx.cfg.googleClientId, redirectUri(ctx, req), scopes));
     return true;
   }
 

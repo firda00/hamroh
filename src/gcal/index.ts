@@ -2,7 +2,7 @@ import type { Config } from '../core/config.ts';
 import type { Db } from '../core/db.ts';
 import type { GcalClient } from './client.ts';
 import { gcalClient, disabledGcal } from './client.ts';
-import { oauthAuth, serviceAuth, readServiceKey } from './auth.ts';
+import { oauthAuth, serviceAuth, readServiceKey } from '../google/auth.ts';
 import { logger } from '../core/logger.ts';
 
 const log = logger('gcal');

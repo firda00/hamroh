@@ -95,7 +95,7 @@ src/
     rules.ts      bosqich 1 — LLM'siz
     anthropic.ts  bosqich 2 — rasmiy SDK orqali
     index.ts      tanlov + xatoda qoidaviy rejimga qaytish
-  modules/        17 ta modul
+  modules/        23 ta modul
   report/html.ts  HTML hisobot + ichki SVG diagramma
   util/
     date.ts       vaqt zonasi, "ertaga 10:00" tahlili

@@ -5,13 +5,13 @@
 Maqsad: tizim LLM'siz ham foydali bo‘lsin. Barcha ma’lumot lokal, hamma hisob-kitob
 deterministik. LLM ulanmasa ham kunlik ish to‘xtamaydi.
 
-- 23 modul, 114 ta buyruq, 16 ta cron vazifasi
+- 23 modul, 117 ta buyruq, 22 ta cron vazifasi
 - Lokal SQLite baza (22 jadval), nol runtime bog‘liqlik
 - Kalitsiz tashqi manbalar: CBU (kurs), Open-Meteo (ob-havo), Google News RSS
 - Ertalabki brifing va kun yakuni + o‘sish darajasi
 - Haqiqiy `.xlsx` / `.docx` eksport, diagrammali HTML hisobot
 - Telegram integratsiyasi (token bo‘lsa)
-- 73 ta test, TypeScript tekshiruvi
+- 89 ta test, TypeScript tekshiruvi
 
 ## Bosqich 2 — LLM ulash
 
@@ -62,11 +62,11 @@ Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 - [x] ~~**Google Calendar** — ikki tomonlama~~ (bajarildi: OAuth va xizmat hisobi, [GCALENDAR.md](GCALENDAR.md))
 - [x] ~~**SMS shlyuzi** (Eskiz / Playmobile)~~ (bajarildi: `src/sms/`, [SMS.md](SMS.md))
 - [ ] **Telefon qo‘ng‘iroqlari** — Android eksporti yoki ATS integratsiyasi
-- [ ] **Instagram Graph API** — qamrov, obunachi, kontent statistikasi
-- [ ] **Google Ads API** — xarajat, bosish, konversiya
-- [ ] **YouTube Data API** — ko‘rish, ko‘rish vaqti, obunachi
-- [ ] **Google Business Profile** — qo‘ng‘iroq, yo‘nalish so‘rovi, izohlar
-- [ ] **2GIS** — statistika eksporti
+- [x] ~~**Instagram Graph API** — qamrov, ko‘rish, obunachi~~ ([MARKETING.md](MARKETING.md))
+- [x] ~~**Google Ads API** — xarajat, bosish, konversiya~~
+- [x] ~~**YouTube Analytics API** — ko‘rish, ko‘rish vaqti, obunachi~~
+- [x] ~~**Google Business Profile** — qo‘ng‘iroq, yo‘nalish so‘rovi~~ (izohlar hali yo‘q)
+- [x] ~~**2GIS** — CSV import~~ (ochiq API yo‘q; skrejping ataylab qilinmadi)
 - [ ] **Sog‘liq** — Google Fit / Apple Health
 - [ ] **PDF** — headless brauzer orqali to‘g‘ridan-to‘g‘ri PDF
 - [x] ~~**Ovozli xabar** — Telegram audio → matn~~ (bajarildi: `ovoz` moduli, [VOICE.md](VOICE.md))

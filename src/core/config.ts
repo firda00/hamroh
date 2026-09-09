@@ -78,6 +78,15 @@ export type Config = {
   googleCalendarId: string;
   googleServiceFile: string;
   googleImpersonate: string;
+  /** Marketing manbalari — rasmiy API. */
+  instagramToken: string;
+  instagramUserId: string;
+  instagramMetrics: string;
+  adsDeveloperToken: string;
+  adsCustomerId: string;
+  adsLoginCustomerId: string;
+  youtubeChannelId: string;
+  gbpLocationId: string;
   /** Veb-panel. Token bo'sh bo'lsa panel umuman ochilmaydi. */
   webToken: string;
   webHost: string;
@@ -143,6 +152,14 @@ export function loadConfig(): Config {
     googleCalendarId: env('GOOGLE_CALENDAR_ID', 'primary'),
     googleServiceFile: env('GOOGLE_SERVICE_ACCOUNT_FILE'),
     googleImpersonate: env('GOOGLE_IMPERSONATE'),
+    instagramToken: env('INSTAGRAM_ACCESS_TOKEN'),
+    instagramUserId: env('INSTAGRAM_USER_ID'),
+    instagramMetrics: env('INSTAGRAM_METRICS', 'reach'),
+    adsDeveloperToken: env('GOOGLE_ADS_DEVELOPER_TOKEN'),
+    adsCustomerId: env('GOOGLE_ADS_CUSTOMER_ID'),
+    adsLoginCustomerId: env('GOOGLE_ADS_LOGIN_CUSTOMER_ID'),
+    youtubeChannelId: env('YOUTUBE_CHANNEL_ID'),
+    gbpLocationId: env('GBP_LOCATION_ID'),
     webToken: env('HAMROH_WEB_TOKEN'),
     webHost: env('HAMROH_WEB_HOST', '127.0.0.1'),
     webPort: Number(env('HAMROH_PORT', '7391')) || 7391,

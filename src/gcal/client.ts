@@ -1,4 +1,4 @@
-import type { GoogleAuth } from './auth.ts';
+import type { GoogleAuth } from '../google/auth.ts';
 
 /**
  * Google Calendar API — faqat kerakli to'rt amal.

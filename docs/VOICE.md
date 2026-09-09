@@ -181,7 +181,7 @@ Sonlar so‘z bilan ham tushuniladi: «ikki yuz ming», «besh million», «bir 
 shuning uchun xato darhol ko‘rinadi.
 
 LLM ulansa (`HAMROH_LLM=local` yoki `anthropic`) — qoidalar tushunmagan gaplar modelga
-uzatiladi va u 79 ta buyruqning istalganini tanlashi mumkin.
+uzatiladi va u 117 ta buyruqning istalganini tanlashi mumkin.
 
 ### Xavfsizlik
 

@@ -1,5 +1,6 @@
 import { createSign } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import type { Db } from '../core/db.ts';
 import { setting } from '../core/db.ts';
 import { logger } from '../core/logger.ts';
@@ -16,12 +17,22 @@ import { logger } from '../core/logger.ts';
  * Kirish tokeni 1 soat yashaydi va `settings` jadvalida keshlanadi.
  */
 
-const log = logger('gcal');
+const log = logger('google');
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
-export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+/** Kerak bo‘lgan ruxsatlar. Bittasi ham ortiqcha so‘ralmaydi. */
+export const SCOPES = {
+  calendar: 'https://www.googleapis.com/auth/calendar',
+  ads: 'https://www.googleapis.com/auth/adwords',
+  youtube: 'https://www.googleapis.com/auth/yt-analytics.readonly',
+  gbp: 'https://www.googleapis.com/auth/business.manage',
+} as const;
 
-const CACHE_KEY = 'gcal:access_token';
-const CACHE_EXP = 'gcal:access_expires';
+export const CALENDAR_SCOPE = SCOPES.calendar;
+
+/** Marketing uchun kerak bo‘ladigan ruxsatlar to‘plami. */
+export const MARKETING_SCOPES = [SCOPES.ads, SCOPES.youtube, SCOPES.gbp];
+
+const short = (s: string): string => createHash('sha256').update(s).digest('hex').slice(0, 12);
 
 export type GoogleAuth = {
   mode: 'oauth' | 'service';
@@ -52,7 +63,13 @@ async function requestToken(body: URLSearchParams): Promise<{ token: string; exp
 }
 
 /** Keshlangan token yoki yangisini oladi. */
-function cached(db: Db, fetchNew: () => Promise<{ token: string; expiresIn: number }>): () => Promise<string> {
+function cached(
+  db: Db,
+  slot: string,
+  fetchNew: () => Promise<{ token: string; expiresIn: number }>,
+): () => Promise<string> {
+  const CACHE_KEY = `google:tok:${slot}`;
+  const CACHE_EXP = `google:exp:${slot}`;
   return async () => {
     const token = setting.get(db, CACHE_KEY);
     const exp = Number(setting.get(db, CACHE_EXP, '0'));
@@ -62,17 +79,19 @@ function cached(db: Db, fetchNew: () => Promise<{ token: string; expiresIn: numb
     const fresh = await fetchNew();
     setting.set(db, CACHE_KEY, fresh.token);
     setting.set(db, CACHE_EXP, String(Date.now() + fresh.expiresIn * 1000));
-    log.debug('kirish tokeni yangilandi');
+    log.debug(`kirish tokeni yangilandi (${slot})`);
     return fresh.token;
   };
 }
 
 /** Shaxsiy hisob: refresh token orqali. */
 export function oauthAuth(db: Db, clientId: string, clientSecret: string, refreshToken: string): GoogleAuth {
+  // Refresh token yangilanganda kesh o'z-o'zidan boshqa uyaga tushadi.
+  // Ruxsatlar rozilik paytida belgilangan, shuning uchun scope bu yerda uzatilmaydi.
   return {
     mode: 'oauth',
     who: 'shaxsiy hisob',
-    accessToken: cached(db, () =>
+    accessToken: cached(db, short(refreshToken), () =>
       requestToken(
         new URLSearchParams({
           client_id: clientId,
@@ -103,17 +122,17 @@ export function readServiceKey(path: string): ServiceKey {
 }
 
 /** Xizmat hisobi: o'zi imzolagan JWT ni tokenga almashtiradi. */
-export function serviceAuth(db: Db, key: ServiceKey, subject = ''): GoogleAuth {
+export function serviceAuth(db: Db, key: ServiceKey, subject = '', scope: string = SCOPES.calendar): GoogleAuth {
   return {
     mode: 'service',
     who: key.client_email,
-    accessToken: cached(db, () => {
+    accessToken: cached(db, short(`${key.client_email}|${scope}|${subject}`), () => {
       const now = Math.floor(Date.now() / 1000);
       const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
       const claim = b64url(
         JSON.stringify({
           iss: key.client_email,
-          scope: CALENDAR_SCOPE,
+          scope,
           aud: TOKEN_URL,
           iat: now,
           exp: now + 3600,
@@ -135,12 +154,16 @@ export function serviceAuth(db: Db, key: ServiceKey, subject = ''): GoogleAuth {
 }
 
 /** Brauzerda ochiladigan ruxsat havolasi. */
-export function consentUrl(clientId: string, redirectUri: string): string {
+export function consentUrl(
+  clientId: string,
+  redirectUri: string,
+  scopes: readonly string[] = [SCOPES.calendar],
+): string {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: CALENDAR_SCOPE,
+    scope: scopes.join(' '),
     access_type: 'offline',
     prompt: 'consent', // refresh_token har doim qaytishi uchun
   });

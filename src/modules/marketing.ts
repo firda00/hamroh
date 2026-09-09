@@ -6,13 +6,20 @@ import { readCsv } from '../util/office.ts';
 import { writeReport } from '../report/html.ts';
 import type { Block } from '../report/html.ts';
 import { readFileSync } from 'node:fs';
+import { makeSources } from '../marketing/index.ts';
+import { consentUrl, CALENDAR_SCOPE, MARKETING_SCOPES } from '../google/auth.ts';
 import { join } from 'node:path';
 
 /**
  * (13) Marketing analitikasi: Instagram, Google Ads, 2GIS, Google Business Profile, YouTube.
  *
- * Bosqich 1: ko'rsatkichlar qo'lda yoki CSV orqali kiritiladi (har bir platforma
- * eksport beradi). Bosqich 3: API ulanadi — kirish nuqtasi `pullers` jadvali.
+ * Ma'lumot uch yo'l bilan keladi:
+ *   `sync`   — rasmiy API dan (Instagram Graph, Google Ads, YouTube, Business Profile)
+ *   `import` — CSV eksportdan (2GIS kabi API bermaydigan platformalar uchun)
+ *   `set`    — qo'lda
+ *
+ * Skrejping ataylab yo'q: u platformalarning shartlarini buzadi va hisobni
+ * bloklashga olib keladi. Faqat rasmiy API, faqat o'qish uchun.
  */
 
 export const PLATFORMS = ['instagram', 'google_ads', '2gis', 'gbp', 'youtube'] as const;
@@ -294,9 +301,157 @@ export const marketingModule: Module = {
         return { text: res.text, data: facts };
       },
     },
+    {
+      name: 'manbalar',
+      usage: 'marketing manbalar',
+      about: 'Qaysi platforma ulangan, qaysisi yo‘q.',
+      run: (ctx) => {
+        const sources = makeSources(ctx.cfg, ctx.db);
+        const rows = sources.map((s) => [s.id, s.ready ? '✅ ulangan' : '— ulanmagan', s.status]);
+        return {
+          text: [
+            table(['Platforma', 'Holat', 'Izoh'], rows),
+            '',
+            'Ulash: hamroh marketing ulash   (Google uchun bitta rozilik yetadi)',
+            'Yig‘ish: hamroh marketing sync --days=7',
+          ].join('\n'),
+          data: sources.map((s) => ({ id: s.id, ready: s.ready, status: s.status })),
+        };
+      },
+    },
+    {
+      name: 'ulash',
+      usage: 'marketing ulash',
+      about: 'Google Ads, YouTube va Business Profile uchun ruxsat havolasi.',
+      run: (ctx) => {
+        if (!ctx.cfg.googleClientId || !ctx.cfg.googleClientSecret) {
+          return {
+            text: [
+              'Avval Google Cloud da OAuth mijozi yarating va .env ga yozing:',
+              '  GOOGLE_CLIENT_ID=...',
+              '  GOOGLE_CLIENT_SECRET=...',
+              '',
+              'Batafsil: docs/MARKETING.md',
+            ].join('\n'),
+          };
+        }
+        const base = ctx.cfg.webBase || `http://127.0.0.1:${ctx.cfg.webPort}`;
+        const redirect = `${base.replace(/\/+$/, '')}/oauth/google/callback`;
+        const url = consentUrl(ctx.cfg.googleClientId, redirect, [CALENDAR_SCOPE, ...MARKETING_SCOPES]);
+        return {
+          text: [
+            'Quyidagi havolani brauzerda oching va ruxsat bering:',
+            '',
+            url,
+            '',
+            `Qaytish manzili: ${redirect}`,
+            'Shu manzil Google Cloud dagi «Authorized redirect URIs» ro‘yxatida ham bo‘lishi shart.',
+            '',
+            'Eslatma: bu havola kalendar + Ads + YouTube + Business Profile ruxsatlarini',
+            'birdan so‘raydi. Avval faqat kalendarga ruxsat bergan bo‘lsangiz, qayta',
+            'rozilik kerak — eski token marketing API larini ochmaydi.',
+          ].join('\n'),
+          data: { url, redirect },
+        };
+      },
+    },
+    {
+      name: 'sync',
+      usage: 'marketing sync [--days=7] [--platform=instagram] [--from=2026-09-01] [--to=2026-09-08]',
+      about: 'Rasmiy API lardan ko‘rsatkichlarni yig‘ish.',
+      run: async (ctx, argv) => {
+        const a = parseArgs(argv);
+        const days = a.num('days', 7);
+        const to = a.str('to', dateKey(ctx.now, ctx.cfg.tz));
+        const from = a.str('from', dateKey(addDays(ctx.now, -days + 1), ctx.cfg.tz));
+        const only = a.str('platform', '');
+
+        let sources = makeSources(ctx.cfg, ctx.db);
+        if (only) sources = sources.filter((s) => s.id === only);
+        if (!sources.length) {
+          return { text: `Bunday platforma yo‘q: ${only}. Mavjud: ${PLATFORMS.join(', ')}` };
+        }
+
+        const lines: string[] = [`Davr: ${from} … ${to}`, ''];
+        const summary: { platform: string; saved: number; error?: string }[] = [];
+
+        for (const source of sources) {
+          if (!source.ready) {
+            lines.push(`—  ${source.id}: ${source.status}`);
+            summary.push({ platform: source.id, saved: 0, error: 'ulanmagan' });
+            continue;
+          }
+          try {
+            const { points, note } = await source.pull(from, to);
+            ctx.db.tx(() => {
+              for (const p of points) {
+                ctx.db.run(
+                  `INSERT INTO marketing_metrics(date, platform, metric, value, account) VALUES(?,?,?,?,?)
+                   ON CONFLICT(date, platform, metric, account) DO UPDATE SET value = excluded.value`,
+                  p.date,
+                  source.id,
+                  p.metric,
+                  p.value,
+                  p.account ?? 'main',
+                );
+              }
+            });
+            lines.push(`✅ ${source.id}: ${points.length} ta qiymat saqlandi  (${note})`);
+            summary.push({ platform: source.id, saved: points.length });
+          } catch (e) {
+            // Bitta platforma yiqilsa qolganlari davom etadi.
+            const msg = (e as Error).message;
+            const head = msg.split('\n')[0] ?? msg;
+            lines.push(head.startsWith(`${source.id}:`) ? `✗  ${head}` : `✗  ${source.id}: ${head}`);
+            summary.push({ platform: source.id, saved: 0, error: msg });
+          }
+        }
+
+        const total = summary.reduce((n, s) => n + s.saved, 0);
+        lines.push('', total ? `Jami ${total} ta qiymat. Hisobot: marketing report --html` : 'Yangi ma’lumot yo‘q.');
+        return { text: lines.join('\n'), data: summary };
+      },
+    },
   ],
 
   jobs: [
+    {
+      name: 'marketing.sync',
+      cron: '30 6 * * *',
+      run: async (ctx) => {
+        // Oxirgi 3 kun: platformalar kechagi raqamlarni keyin ham tuzatadi.
+        const to = dateKey(ctx.now, ctx.cfg.tz);
+        const from = dateKey(addDays(ctx.now, -2), ctx.cfg.tz);
+        const sources = makeSources(ctx.cfg, ctx.db).filter((s) => s.ready);
+        if (!sources.length) return 'ulangan manba yo‘q';
+
+        let saved = 0;
+        const failed: string[] = [];
+        for (const source of sources) {
+          try {
+            const { points } = await source.pull(from, to);
+            ctx.db.tx(() => {
+              for (const pt of points) {
+                ctx.db.run(
+                  `INSERT INTO marketing_metrics(date, platform, metric, value, account) VALUES(?,?,?,?,?)
+                   ON CONFLICT(date, platform, metric, account) DO UPDATE SET value = excluded.value`,
+                  pt.date,
+                  source.id,
+                  pt.metric,
+                  pt.value,
+                  pt.account ?? 'main',
+                );
+              }
+            });
+            saved += points.length;
+          } catch (e) {
+            const head = (e as Error).message.split(String.fromCharCode(10))[0] ?? '';
+            failed.push(head.startsWith(`${source.id}:`) ? head : `${source.id}: ${head}`);
+          }
+        }
+        return failed.length ? `${saved} ta qiymat; xato — ${failed.join('; ')}` : `${saved} ta qiymat`;
+      },
+    },
     {
       name: 'marketing.oylik-hisobot',
       cron: '0 10 1 * *',

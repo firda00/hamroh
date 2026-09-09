@@ -9,6 +9,7 @@ import { dayKpis, weakSpots } from '../modules/report.ts';
 import { unpaid } from '../modules/recurring.ts';
 import { leadsSince } from '../modules/leads.ts';
 import { pendingSms } from '../modules/comms.ts';
+import { makeSources } from '../marketing/index.ts';
 
 /** Sahifalar. Har biri tayyor HTML qaytaradi — shablon dvigateli yo'q. */
 
@@ -353,10 +354,27 @@ export function settingsPage(ctx: Ctx, csrf: string, flash: Flash, oauthUrl: str
          «Authorized redirect URIs» ga shuni kiriting:<br/><code>${esc(redirectUri)}</code><br/><br/>
          Qadamma-qadam: <b>docs/GCALENDAR.md</b></div>`;
 
+  const sources = makeSources(ctx.cfg, ctx.db);
+  const marketingRows = sources.map((src) => [
+    esc(src.id),
+    src.ready ? '<span class="pill ok">ulangan</span>' : '<span class="pill">ulanmagan</span>',
+    `<span class="muted">${esc(src.status)}</span>`,
+  ]);
+  const marketing =
+    table(['Platforma', 'Holat', 'Izoh'], marketingRows) +
+    (ctx.cfg.googleClientId && ctx.cfg.googleClientSecret
+      ? `<p style="margin-top:12px"><a href="/oauth/google?scope=marketing"><button>Google Ads, YouTube va Business Profile'ni ulash</button></a></p>
+         <div class="note">Bu rozilik kalendarga qo‘shimcha uchta ruxsatni ham so‘raydi.
+         Instagram alohida: <code>INSTAGRAM_ACCESS_TOKEN</code> va <code>INSTAGRAM_USER_ID</code>.<br/>
+         2GIS ochiq API bermaydi — kabinetdan CSV eksport qilib <code>marketing import</code> ishlating.<br/>
+         Qadamma-qadam: <b>docs/MARKETING.md</b></div>`
+      : '<div class="note">Avval Google OAuth mijozini sozlang (yuqoridagi kartochka).</div>');
+
   return page(
     { title: 'Sozlamalar', subtitle: `Baza: ${ctx.cfg.dbPath}`, path: '/sozlama', flash },
     card('Ulanishlar', table(['Imkoniyat', 'Holat', 'Hujjat'], rows)) +
       card('Google Calendar', google) +
+      card('Marketing manbalari', marketing) +
       card(
         'Navbatlar',
         `<ul class="plain">
