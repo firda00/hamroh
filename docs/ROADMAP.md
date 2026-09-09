@@ -5,13 +5,13 @@
 Maqsad: tizim LLM'siz ham foydali bo‘lsin. Barcha ma’lumot lokal, hamma hisob-kitob
 deterministik. LLM ulanmasa ham kunlik ish to‘xtamaydi.
 
-- 17 modul, 79 ta buyruq, 16 ta cron vazifasi
-- Lokal SQLite baza (21 jadval), nol runtime bog‘liqlik
+- 23 modul, 114 ta buyruq, 16 ta cron vazifasi
+- Lokal SQLite baza (22 jadval), nol runtime bog‘liqlik
 - Kalitsiz tashqi manbalar: CBU (kurs), Open-Meteo (ob-havo), Google News RSS
 - Ertalabki brifing va kun yakuni + o‘sish darajasi
 - Haqiqiy `.xlsx` / `.docx` eksport, diagrammali HTML hisobot
 - Telegram integratsiyasi (token bo‘lsa)
-- 21 ta test, TypeScript tekshiruvi
+- 73 ta test, TypeScript tekshiruvi
 
 ## Bosqich 2 — LLM ulash
 
@@ -82,6 +82,17 @@ Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 - [x] ~~Telegram bot to‘liq boshqaruv paneli sifatida (tugmalar bilan)~~ (bajarildi: `bot` moduli)
 - [x] ~~Veb interfeys~~ (bajarildi: `npm run panel`, [WEB.md](WEB.md))
 - [ ] Mobil bildirishnomalar
+
+## Xavfsizlik
+
+- [x] ~~Panel: token + CSRF, standart holatda faqat 127.0.0.1~~
+- [x] ~~Telegram: ruxsat ro‘yxati majburiy (bo‘sh ro‘yxat = hech kimga javob yo‘q)~~
+- [x] ~~SMS: kunlik chegara; telefon: faqat ro‘yxatdagi raqamlar~~
+- [x] ~~JSON API: sarlavhadagi kalit, cookie qabul qilinmaydi (CSRF), 503 agar kalit yo‘q~~
+- [x] ~~`POST /run`: tashqariga chiqadigan buyruqlar uchun `"confirm": true`~~
+- [x] ~~Telegram webhook siri majburiy~~
+- [ ] Navyklar sandboxida tarmoqni bloklash (Node da `--allow-net` yo‘q)
+- [ ] Panelni internetga ochganda: nginx + HTTPS ko‘rsatmasi sinovdan o‘tkazilsin
 
 ## Qaror qabul qilingan tamoyillar
 
