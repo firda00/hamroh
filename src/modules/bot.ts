@@ -311,14 +311,28 @@ export const botModule: Module = {
               : 'Webhook o‘rnatilmagan (long polling rejimi).',
           };
         }
+        // Sir majburiy: usiz istalgan odam webhook manziliga o'zini siz deb
+        // ko'rsatib xabar yuborishi mumkin, bot esa buyruqlarni bajaradi.
         const secret = a.str('secret', process.env['TELEGRAM_WEBHOOK_SECRET'] ?? '');
+        if (secret.length < 16) {
+          return {
+            text: [
+              'Webhook uchun sir shart (kamida 16 belgi).',
+              'Usiz istalgan odam o‘zini siz deb ko‘rsatib bot bilan gaplasha oladi.',
+              '',
+              'Yarating va .env ga yozing:',
+              '  TELEGRAM_WEBHOOK_SECRET=<uzun tasodifiy satr>',
+              'yoki: bot webhook --url=... --secret=<uzun tasodifiy satr>',
+            ].join('\n'),
+          };
+        }
         await call(ctx, 'setWebhook', {
           url,
-          secret_token: secret || undefined,
+          secret_token: secret,
           allowed_updates: ['message', 'callback_query'],
         });
         await registerCommands(ctx);
-        return { text: `✅ Webhook o‘rnatildi: ${url}${secret ? '\n(secret token bilan)' : ''}` };
+        return { text: `✅ Webhook o‘rnatildi: ${url}\n(sir bilan himoyalangan)` };
       },
     },
     {

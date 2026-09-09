@@ -132,17 +132,41 @@ Panel `hamroh` foydalanuvchisi ostida, cheklangan huquq bilan ishlaydi
 Panel bilan bir portda oddiy JSON API ham bor — kelajakdagi mobil ilova yoki
 integratsiyalar uchun:
 
-| Yo‘l | Nima |
-| --- | --- |
-| `GET /health` | Holat |
-| `GET /modules` | Modullar va buyruqlar ro‘yxati |
-| `GET /brief/morning` \| `/brief/evening` | Brifing (matn + bo‘limlar) |
-| `POST /run` | `{module, command, args[]}` — istalgan buyruqni bajarish |
-| `POST /telegram` | Telegram webhook ([TELEGRAM.md](TELEGRAM.md)) |
+| Yo‘l | Nima | Kirish |
+| --- | --- | --- |
+| `GET /health` | Tirikmi | ochiq (tafsilot — kalit bilan) |
+| `GET /modules` | Modullar va buyruqlar ro‘yxati | **kalit** |
+| `GET /brief/morning` \| `/brief/evening` | Brifing | **kalit** |
+| `POST /run` | `{module, command, args[]}` — buyruq bajarish | **kalit** |
+| `POST /telegram` | Telegram webhook ([TELEGRAM.md](TELEGRAM.md)) | webhook siri |
+| `GET /audio/<uuid>` | Qo‘ng‘iroq audiosi | ochiq (nom taxmin qilinmaydi) |
 
-⚠️ API yo‘llari hozircha **kalit talab qilmaydi** — shuning uchun panelni internetga
-ochsangiz, nginx darajasida `/run`, `/modules`, `/brief` yo‘llarini yopib qo‘ying yoki
-faqat SSH tunnel orqali ishlating.
+Kalit — o‘sha `HAMROH_WEB_TOKEN`, faqat **sarlavhada**:
+
+```bash
+curl -H "Authorization: Bearer $HAMROH_WEB_TOKEN" http://127.0.0.1:7391/modules
+```
+
+```bash
+curl -X POST http://127.0.0.1:7391/run \
+  -H "Authorization: Bearer $HAMROH_WEB_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"module":"vazifa","command":"list"}'
+```
+
+Uch qoida bor, va uchalasi ham ataylab:
+
+1. **Cookie qabul qilinmaydi.** Aks holda boshqa saytdagi forma sizning brauzeringiz
+   nomidan `POST /run` yuborishi mumkin bo‘lardi (CSRF). Kalit sarlavhada
+   bo‘lgani uchun bunday hujum ishlamaydi.
+2. **Kalit qo‘yilmagan bo‘lsa API yopiq** (503), ochiq emas — panel bilan bir xil qoida:
+   sozlanmagan narsa ochiq qolmaydi.
+3. **Tashqariga chiqadigan buyruqlar tasdiq so‘raydi.** `aloqa:sms`, `qongiroq:qil`,
+   `telegram:send`, `vazifa:rm`, `kalendar:rm` uchun so‘rov tanasida
+   `"confirm": true` bo‘lishi shart, aks holda `428` qaytadi.
+
+Kalit topishga urinish cheklangan: bir manzildan 5 daqiqada 10 marta xato kalit —
+keyin `429`, 5 daqiqaga.
 
 ## Xatoliklar
 

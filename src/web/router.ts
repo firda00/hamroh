@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import type { Ctx } from '../core/types.ts';
 import { applyEnv } from '../util/env.ts';
@@ -15,6 +15,7 @@ import { runInSandbox } from '../skills/sandbox.ts';
 import { readdirSync, renameSync, unlinkSync } from 'node:fs';
 import { logger } from '../core/logger.ts';
 import * as views from './pages.ts';
+import { safeEqual } from './guard.ts';
 
 /**
  * Veb-panel yo'naltiruvchisi.
@@ -31,12 +32,6 @@ const COOKIE = 'hamroh_session';
 const sha = (s: string): string => createHash('sha256').update(s).digest('hex');
 const sessionValue = (token: string): string => sha(`session:${token}`);
 const csrfValue = (token: string): string => sha(`csrf:${token}`);
-
-function safeEqual(a: string, b: string): boolean {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
 
 function cookies(req: IncomingMessage): Record<string, string> {
   const out: Record<string, string> = {};

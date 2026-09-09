@@ -1,133 +1,52 @@
 import { createServer } from 'node:http';
 import { createCtx } from './core/context.ts';
-import { modules, byId } from './modules/index.ts';
-import { buildBrief } from './core/brief.ts';
 import { logger } from './core/logger.ts';
+import { handleApi, json } from './web/api.ts';
 
 /**
- * Kichik lokal HTTP API — kelajakdagi mobil/veb interfeys uchun.
- * Faqat 127.0.0.1 da tinglaydi (tashqi tarmoqqa ochilmaydi).
+ * Lokal HTTP server: veb-panel (HTML) + JSON API.
+ * Standart holatda faqat 127.0.0.1 da tinglaydi — tashqi tarmoqqa ochilmaydi.
+ *
+ * Yo'nalish tartibi: avval panel (o'z cookie himoyasi bilan), keyin API
+ * (sarlavhadagi kalit bilan). Ikkalasi ham HAMROH_WEB_TOKEN ga tayanadi.
  */
 
 const log = logger('server');
 const PORT = Number(process.env['HAMROH_PORT'] ?? 7391);
 const HOST = process.env['HAMROH_WEB_HOST'] ?? '127.0.0.1';
 
-const json = (res: import('node:http').ServerResponse, code: number, body: unknown): void => {
-  const text = JSON.stringify(body, null, 2);
-  res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
-  res.end(text);
-};
-
-async function readBody(req: import('node:http').IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const c of req) chunks.push(c as Buffer);
-  if (!chunks.length) return {};
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
 async function main(): Promise<void> {
   const ctx = await createCtx();
 
   const server = createServer((req, res) => {
     void (async () => {
-      const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
       ctx.now = new Date();
       try {
         // Veb-panel — o'z yo'llarini o'zi hal qiladi
         const { handleWeb } = await import('./web/router.ts');
         if (await handleWeb(ctx, req, res)) return;
 
-        if (url.pathname === '/health') {
-          return json(res, 200, { ok: true, tz: ctx.cfg.tz, llm: ctx.llm.id, modules: modules.length });
-        }
-
-        if (url.pathname === '/modules') {
-          return json(
-            res,
-            200,
-            modules.map((m) => ({
-              id: m.id,
-              title: m.title,
-              about: m.about,
-              commands: m.commands.map((c) => ({ name: c.name, usage: c.usage, about: c.about })),
-            })),
-          );
-        }
-
-        if (url.pathname === '/brief/morning' || url.pathname === '/brief/evening') {
-          const kind = url.pathname.endsWith('morning') ? 'morning' : 'evening';
-          const { text, sections } = await buildBrief(ctx, modules, kind);
-          return json(res, 200, { kind, text, sections });
-        }
-
-        // Qo'ng'iroq uchun audio: Twilio faylni internetdan oladi.
-        // Faqat out/public ichidagi fayllar, faqat o'qish uchun; nom UUID bo'lgani
-        // uchun taxmin qilib bo'lmaydi.
-        if (url.pathname.startsWith('/audio/')) {
-          const name = url.pathname.slice('/audio/'.length);
-          if (!/^[\w.-]+$/.test(name) || name.includes('..')) {
-            return json(res, 400, { error: 'noto‘g‘ri nom' });
-          }
-          const { readFile } = await import('node:fs/promises');
-          const { join } = await import('node:path');
-          try {
-            const bytes = await readFile(join(ctx.cfg.outDir, 'public', name));
-            const ext = name.split('.').pop() ?? '';
-            const mime: Record<string, string> = { ogg: 'audio/ogg', mp3: 'audio/mpeg', wav: 'audio/wav' };
-            res.writeHead(200, { 'content-type': mime[ext] ?? 'application/octet-stream', 'content-length': bytes.length });
-            res.end(bytes);
-          } catch {
-            json(res, 404, { error: 'topilmadi' });
-          }
-          return;
-        }
-
-        // Telegram webhook — bot.ts dagi bir xil ishlov beruvchiga boradi
-        if (url.pathname === '/telegram' && req.method === 'POST') {
-          const secret = process.env['TELEGRAM_WEBHOOK_SECRET'] ?? '';
-          if (secret && req.headers['x-telegram-bot-api-secret-token'] !== secret) {
-            return json(res, 401, { error: 'secret token mos kelmadi' });
-          }
-          const update = await readBody(req);
-          // Telegram tez javob kutadi — ishlov fonda ketadi
-          json(res, 200, { ok: true });
-          const { handleUpdate } = await import('./modules/bot.ts');
-          handleUpdate(ctx, update as never).catch((e: unknown) => log.error(`webhook: ${(e as Error).message}`));
-          return;
-        }
-
-        if (url.pathname === '/run' && req.method === 'POST') {
-          const body = await readBody(req);
-          const mod = byId(String(body['module'] ?? ''));
-          const cmd = mod?.commands.find((c) => c.name === String(body['command'] ?? ''));
-          if (!mod || !cmd) return json(res, 404, { error: 'modul yoki buyruq topilmadi' });
-          const args = Array.isArray(body['args']) ? (body['args'] as unknown[]).map(String) : [];
-          const out = await cmd.run(ctx, args);
-          return json(res, 200, out);
-        }
-
-        json(res, 404, { error: 'topilmadi', paths: ['/health', '/modules', '/brief/morning', '/brief/evening', 'POST /run'] });
+        await handleApi(ctx, req, res);
       } catch (e) {
         log.error((e as Error).message);
-        json(res, 500, { error: (e as Error).message });
+        if (!res.headersSent) json(res, 500, { error: (e as Error).message });
+        else res.end();
       }
     })();
   });
 
   server.listen(PORT, HOST, () => {
     log.info(`Panel: http://${HOST}:${PORT}`);
-    if (!ctx.cfg.webToken) log.warn('HAMROH_WEB_TOKEN yo‘q — veb-panel o‘chirilgan, faqat API ishlaydi.');
-    if (HOST !== '127.0.0.1') log.warn(`Panel tashqi tarmoqqa ochiq (${HOST}) — HTTPS va kuchli token shart.`);
+    if (!ctx.cfg.webToken) {
+      log.warn('HAMROH_WEB_TOKEN yo‘q — panel ham, API ham yopiq. Faqat /health javob beradi.');
+    }
+    if (HOST !== '127.0.0.1') log.warn(`Server tashqi tarmoqqa ochiq (${HOST}) — HTTPS va kuchli kalit shart.`);
   });
+
   process.on('SIGINT', () => {
     server.close();
     ctx.db.close();
-    process.exit(0);
+    process.exitCode = 0;
   });
 }
 

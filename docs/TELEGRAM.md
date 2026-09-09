@@ -137,9 +137,18 @@ npm run serve
 npm run hamroh -- bot webhook --url=https://sizning-domen.uz/telegram --secret=uzun-tasodifiy-satr
 ```
 
-`.env` ga `TELEGRAM_WEBHOOK_SECRET=uzun-tasodifiy-satr` qo‘ying — server har bir so‘rovni
-shu bilan tekshiradi. Holatni ko‘rish: `bot webhook` (argumentsiz).
-Qaytish: `bot stop-webhook`.
+Sir **majburiy** (kamida 16 belgi) — `.env` ga ham xuddi shu qiymatni yozing:
+
+```bash
+TELEGRAM_WEBHOOK_SECRET=uzun-tasodifiy-satr
+```
+
+Nega majburiy: webhook manzili internetda ochiq turadi. Sirsiz bo‘lsa istalgan odam
+o‘sha manzilga o‘zini siz deb ko‘rsatgan xabar yuborishi mumkin — bot esa buyruqni
+bajaradi (SMS, qo‘ng‘iroq, moliya). Sir bo‘lmasa server `503` qaytaradi va
+`bot webhook` o‘rnatishdan bosh tortadi.
+
+Holatni ko‘rish: `bot webhook` (argumentsiz). Qaytish: `bot stop-webhook`.
 
 ---
 
