@@ -10,6 +10,7 @@ import { disabledStt } from '../src/stt/provider.ts';
 import { disabledTts } from '../src/tts/provider.ts';
 import { disabledTel } from '../src/tel/provider.ts';
 import { disabledSms } from '../src/sms/provider.ts';
+import { disabledGcal } from '../src/gcal/client.ts';
 import { loadConfig } from '../src/core/config.ts';
 import { totals, savingTips } from '../src/modules/finance.ts';
 import { dayKpis, weakSpots } from '../src/modules/report.ts';
@@ -26,7 +27,7 @@ const NOW = new Date('2026-09-08T06:00:00.000Z'); // Toshkentda 11:00
 function ctxFor(): Ctx {
   process.env['HAMROH_DB'] = ':memory:';
   const cfg = { ...loadConfig(), dbPath: ':memory:', tz: 'Asia/Tashkent', currency: 'UZS', offline: true };
-  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), tel: disabledTel(), sms: disabledSms(), now: NOW };
+  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), tel: disabledTel(), sms: disabledSms(), gcal: disabledGcal(), now: NOW };
 }
 
 const iso = (daysAgo: number, h = 12): string =>
@@ -554,4 +555,162 @@ test('SMS: xato bo‘lsa xabar yo‘qolmaydi, keyin qayta uriniladi', async () =
   assert.equal(good.sent, 1, 'keyingi urinishda ketishi kerak');
   assert.equal(pendingSms(ctx).length, 0);
   ctx.db.close();
+});
+
+test('Google Calendar: ikki tomonlama sinxronizatsiya', async () => {
+  const { createServer } = await import('node:http');
+  const { gcalClient } = await import('../src/gcal/client.ts');
+  const { syncGcal } = await import('../src/modules/calendar-sync.ts');
+
+  let remote: Record<string, unknown>[] = [];
+  const created: Record<string, unknown>[] = [];
+  const deleted: string[] = [];
+  let nextId = 100;
+
+  const server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (c) => chunks.push(c as Buffer));
+    req.on('end', () => {
+      res.setHeader('content-type', 'application/json');
+      const path = req.url ?? '';
+
+      if (req.method === 'POST' && path.includes('/events')) {
+        const body = JSON.parse(Buffer.concat(chunks).toString()) as Record<string, unknown>;
+        created.push(body);
+        res.writeHead(200);
+        res.end(JSON.stringify({ id: `g-${nextId++}`, ...body }));
+        return;
+      }
+      if (req.method === 'DELETE') {
+        deleted.push(decodeURIComponent(path.split('/').pop() ?? ''));
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+      if (path.includes('/events?')) {
+        assert.ok(path.includes('singleEvents=true'), 'takrorlanuvchilar yoyilishi kerak');
+        res.writeHead(200);
+        res.end(JSON.stringify({ items: remote }));
+        return;
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ summary: 'Ish kalendari' }));
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as { port: number }).port;
+
+  const ctx = ctxFor();
+  ctx.gcal = gcalClient(
+    { mode: 'oauth', who: 'test', accessToken: () => Promise.resolve('tok') },
+    'primary',
+    `http://127.0.0.1:${port}`,
+  );
+
+  try {
+    // 1. Google -> mahalliy
+    remote = [
+      {
+        id: 'g-1',
+        summary: 'Investor bilan',
+        location: 'Ofis',
+        start: { dateTime: '2026-09-10T10:00:00Z' },
+        end: { dateTime: '2026-09-10T11:00:00Z' },
+      },
+    ];
+    const first = await syncGcal(ctx);
+    assert.equal(first.pulled, 1, first.lines.join(' | '));
+    const local = ctx.db.get<{ id: number; title: string; source: string }>(`SELECT * FROM events WHERE external_id='g-1'`);
+    assert.equal(local?.title, 'Investor bilan');
+    assert.equal(local?.source, 'google');
+
+    // 2. Google'da nom o'zgardi -> mahalliy yangilanadi, dublikat yaratilmaydi
+    remote[0]!['summary'] = 'Investor bilan (ko‘chirildi)';
+    const second = await syncGcal(ctx);
+    assert.equal(second.pulled, 0, 'mavjud hodisa qayta qo‘shilmasligi kerak');
+    assert.equal(
+      ctx.db.get<{ n: number }>(`SELECT COUNT(*) n FROM events WHERE external_id='g-1'`)?.n,
+      1,
+      'dublikat paydo bo‘ldi',
+    );
+    assert.equal(
+      ctx.db.get<{ title: string }>(`SELECT title FROM events WHERE external_id='g-1'`)?.title,
+      'Investor bilan (ko‘chirildi)',
+    );
+
+    // 3. Mahalliy -> Google
+    ctx.db.run(
+      `INSERT INTO events(title, start_at, end_at, location) VALUES(?,?,?,?)`,
+      'Buxgalter bilan',
+      '2026-09-11T09:00:00.000Z',
+      '2026-09-11T10:00:00.000Z',
+      'Zoom',
+    );
+    const third = await syncGcal(ctx);
+    assert.equal(third.pushed, 1, third.lines.join(' | '));
+    assert.equal(created[0]?.['summary'], 'Buxgalter bilan');
+    assert.ok(
+      ctx.db.get<{ external_id: string }>(`SELECT external_id FROM events WHERE title='Buxgalter bilan'`)?.external_id,
+      'yuborilgandan keyin external_id saqlanishi kerak',
+    );
+
+    // Ikkinchi marta qayta yuborilmaydi
+    const fourth = await syncGcal(ctx);
+    assert.equal(fourth.pushed, 0, 'bir hodisa ikki marta yuborilmasligi kerak');
+
+    // 4. Google'da bekor qilindi -> mahalliy ham yopiladi
+    remote[0]!['status'] = 'cancelled';
+    const fifth = await syncGcal(ctx);
+    assert.equal(fifth.canceled, 1);
+    assert.equal(ctx.db.get<{ status: string }>(`SELECT status FROM events WHERE external_id='g-1'`)?.status, 'bekor');
+
+    // 5. Mahalliy o'chirish -> Google'dan ham
+    const { removeEvent } = await import('../src/modules/calendar-sync.ts');
+    assert.equal(await removeEvent(ctx, 'g-100'), true);
+    assert.deepEqual(deleted, ['g-100']);
+  } finally {
+    server.close();
+    ctx.db.close();
+  }
+});
+
+test('Google Calendar: kun bo‘yi hodisa va xatolar', async () => {
+  const { createServer } = await import('node:http');
+  const { gcalClient } = await import('../src/gcal/client.ts');
+  const { syncGcal } = await import('../src/modules/calendar-sync.ts');
+
+  const server = createServer((req, res) => {
+    res.setHeader('content-type', 'application/json');
+    if ((req.url ?? '').includes('/events?')) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ items: [{ id: 'g-day', summary: 'Bayram', start: { date: '2026-09-12' }, end: { date: '2026-09-13' } }] }));
+      return;
+    }
+    res.writeHead(404);
+    res.end(JSON.stringify({ error: { message: 'Not Found' } }));
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as { port: number }).port;
+
+  const ctx = ctxFor();
+  ctx.gcal = gcalClient(
+    { mode: 'service', who: 'sa@test', accessToken: () => Promise.resolve('tok') },
+    'primary',
+    `http://127.0.0.1:${port}`,
+  );
+
+  try {
+    const r = await syncGcal(ctx);
+    assert.equal(r.pulled, 1, 'kun bo‘yi hodisa ham olinishi kerak');
+    assert.ok(ctx.db.get(`SELECT id FROM events WHERE external_id='g-day'`));
+
+    // 404 xatosi xizmat hisobi uchun izoh beradi
+    await assert.rejects(
+      () => ctx.gcal.check(),
+      (e: Error) => e.message.includes('xizmat hisobiga ulashdingizmi'),
+    );
+  } finally {
+    server.close();
+    ctx.db.close();
+  }
 });

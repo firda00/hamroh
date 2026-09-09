@@ -91,7 +91,7 @@ npm run hamroh -- kun --html
 | `bozor` | (2) Kurs va ob-havo | `hamroh bozor kurs --history=7` |
 | `yangilik` | (1) Yangiliklar | `hamroh yangilik top --cat=jahon` |
 | `vazifa` | (3) Vazifa va eslatma | `hamroh vazifa add "Bankka borish" --due="ertaga 10:00"` |
-| `kalendar` | (4) Uchrashuvlar | `hamroh kalendar add "Investor" --at="ertaga 15:00"` |
+| `kalendar` | (4) Uchrashuvlar, Google Calendar | `hamroh kalendar add "Investor" --at="ertaga 15:00"` |
 | `hisobot` | (5) Kunlik hisobot | `hamroh hisobot kun --html` |
 | `moliya` | (5) Kirim-chiqim | `hamroh moliya out 250k taksiga` (toifa o‘zi aniqlanadi) |
 | `buxgalter` | (6) Buxgalteriya | `hamroh buxgalter list` |
@@ -251,6 +251,7 @@ npm test && npm run typecheck
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
 - [docs/VPS.md](docs/VPS.md) — serverga o‘rnatish, systemd, zaxira nusxa
+- [docs/GCALENDAR.md](docs/GCALENDAR.md) — Google Calendar (ikki tomonlama)
 - [docs/SMS.md](docs/SMS.md) — SMS shlyuzi (Eskiz va boshqalar)
 - [docs/CALLS.md](docs/CALLS.md) — telefon qo‘ng‘irog‘i (Asterisk, Twilio)
 - [docs/TELEGRAM.md](docs/TELEGRAM.md) — Telegram bot, xavfsizlik, webhook va hosting (Vercel haqida ham)

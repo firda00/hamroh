@@ -50,7 +50,7 @@ Rejalashtirilgan qo‘shimchalar:
 
 Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 
-- [ ] **Google Calendar** — ikki tomonlama (hozir faqat ICS import)
+- [x] ~~**Google Calendar** — ikki tomonlama~~ (bajarildi: OAuth va xizmat hisobi, [GCALENDAR.md](GCALENDAR.md))
 - [x] ~~**SMS shlyuzi** (Eskiz / Playmobile)~~ (bajarildi: `src/sms/`, [SMS.md](SMS.md))
 - [ ] **Telefon qo‘ng‘iroqlari** — Android eksporti yoki ATS integratsiyasi
 - [ ] **Instagram Graph API** — qamrov, obunachi, kontent statistikasi

@@ -5,6 +5,9 @@ import { table, truncate } from '../util/fmt.ts';
 import { fetchText } from '../util/http.ts';
 import { enqueue } from './notify.ts';
 import { existsSync, readFileSync } from 'node:fs';
+import { syncGcal, pushEvent, removeEvent } from './calendar-sync.ts';
+import { consentUrl, exchangeCode } from '../gcal/auth.ts';
+import { createServer } from 'node:http';
 
 /** (4) Kalendar: uchrashuvlar, bo'sh vaqt, ICS import. */
 
@@ -63,8 +66,8 @@ export const calendarModule: Module = {
     {
       name: 'add',
       usage: 'kalendar add "<nom>" --at="ertaga 15:00" [--dur=60] [--where=ofis] [--with="Ali, Vali"]',
-      about: 'Uchrashuv belgilash.',
-      run: (ctx, argv) => {
+      about: 'Uchrashuv belgilash (Google Calendar ulangan bo‘lsa — o‘sha yerga ham).',
+      run: async (ctx, argv) => {
         const a = parseArgs(argv);
         const title = a.at(0) || a.rest(0);
         const atRaw = a.str('at');
@@ -83,8 +86,10 @@ export const calendarModule: Module = {
           a.str('with') || null,
           a.str('notes') || null,
         );
+        const gid = await pushEvent(ctx, r.lastInsertRowid);
+        const synced = gid ? ' · Google Calendar ✓' : ctx.gcal.enabled ? ' · Google Calendar ✗ (keyin: kalendar sync)' : '';
         return {
-          text: `📅 #${r.lastInsertRowid} ${title} — ${stamp(start, ctx.cfg.tz)}–${timeKey(end, ctx.cfg.tz)} (${humanUntil(start, ctx.now)})`,
+          text: `📅 #${r.lastInsertRowid} ${title} — ${stamp(start, ctx.cfg.tz)}–${timeKey(end, ctx.cfg.tz)} (${humanUntil(start, ctx.now)})${synced}`,
         };
       },
     },
@@ -146,11 +151,98 @@ export const calendarModule: Module = {
     {
       name: 'rm',
       usage: 'kalendar rm <id>',
-      about: 'Uchrashuvni bekor qilish.',
-      run: (ctx, argv) => {
+      about: 'Uchrashuvni bekor qilish (Google Calendar dan ham).',
+      run: async (ctx, argv) => {
         const id = Number(parseArgs(argv).at(0));
+        const e = ctx.db.get<{ external_id: string | null }>(`SELECT external_id FROM events WHERE id=?`, id);
         const r = ctx.db.run(`UPDATE events SET status='bekor' WHERE id=?`, id);
-        return { text: r.changes ? `🗑 #${id} bekor qilindi.` : `#${id} topilmadi.` };
+        if (!r.changes) return { text: `#${id} topilmadi.` };
+        const alsoGoogle = e?.external_id ? await removeEvent(ctx, e.external_id) : false;
+        return { text: `🗑 #${id} bekor qilindi${alsoGoogle ? ' (Google Calendar dan ham)' : ''}.` };
+      },
+    },
+    {
+      name: 'sync',
+      usage: 'kalendar sync [--days=60]',
+      about: 'Google Calendar bilan ikki tomonlama sinxronizatsiya.',
+      run: async (ctx, argv) => {
+        const r = await syncGcal(ctx, parseArgs(argv).num('days', 60));
+        const summary = `Olindi: ${r.pulled} · Yuborildi: ${r.pushed} · Bekor: ${r.canceled}${r.failed ? ` · Xato: ${r.failed}` : ''}`;
+        return { text: r.lines.length ? [...r.lines.slice(0, 30), '', summary].join('\n') : summary, data: r };
+      },
+    },
+    {
+      name: 'gstatus',
+      usage: 'kalendar gstatus',
+      about: 'Google Calendar ulanishini tekshirish.',
+      run: async (ctx) => {
+        if (!ctx.gcal.enabled) {
+          return { text: 'Google Calendar ulanmagan (HAMROH_GCAL=off).\nUlash:  hamroh kalendar auth\nBatafsil: docs/GCALENDAR.md' };
+        }
+        const name = await ctx.gcal.check();
+        const linked = ctx.db.get<{ n: number }>(`SELECT COUNT(*) n FROM events WHERE external_id IS NOT NULL`);
+        return { text: [`✓ ${ctx.gcal.id}`, `Kalendar: ${name}`, `Bog‘langan hodisalar: ${linked?.n ?? 0} ta`].join('\n') };
+      },
+    },
+    {
+      name: 'auth',
+      usage: 'kalendar auth [--port=8765]',
+      about: 'Google hisobiga ruxsat olish (brauzer kerak, bir marta).',
+      run: async (ctx, argv) => {
+        const a = parseArgs(argv);
+        const clientId = ctx.cfg.googleClientId;
+        const clientSecret = ctx.cfg.googleClientSecret;
+        if (!clientId || !clientSecret) {
+          return {
+            text: [
+              'Avval Google Cloud da OAuth mijozi yarating (turi: Desktop app) va .env ga qo‘ying:',
+              '  GOOGLE_CLIENT_ID=...',
+              '  GOOGLE_CLIENT_SECRET=...',
+              '',
+              'Qadamma-qadam: docs/GCALENDAR.md',
+            ].join('\n'),
+          };
+        }
+
+        const port = a.num('port', 8765);
+        const redirect = `http://127.0.0.1:${port}`;
+        const url = consentUrl(clientId, redirect);
+
+        console.log('Brauzerda quyidagi havolani oching va ruxsat bering:\n');
+        console.log(`  ${url}\n`);
+        console.log(`Ruxsatdan keyin ${redirect} ga qaytariladi. Kutilmoqda…`);
+
+        const code = await new Promise<string>((resolve, reject) => {
+          const server = createServer((req, res) => {
+            const got = new URL(req.url ?? '/', redirect).searchParams;
+            const value = got.get('code');
+            const err = got.get('error');
+            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+            res.end(
+              `<html><body style="font-family:system-ui;padding:40px"><h2>${value ? '✅ Tayyor' : '❌ Xato'}</h2><p>${value ? 'Terminalga qayting.' : err ?? 'kod kelmadi'}</p></body></html>`,
+            );
+            server.close();
+            if (value) resolve(value);
+            else reject(new Error(err ?? 'ruxsat berilmadi'));
+          });
+          server.listen(port, '127.0.0.1');
+          setTimeout(() => {
+            server.close();
+            reject(new Error('5 daqiqa ichida javob kelmadi'));
+          }, 300_000);
+        });
+
+        const tokens = await exchangeCode(clientId, clientSecret, code, redirect);
+        return {
+          text: [
+            '✅ Ruxsat olindi. Quyidagini .env ga qo‘ying:',
+            '',
+            '  HAMROH_GCAL=oauth',
+            `  GOOGLE_REFRESH_TOKEN=${tokens.refreshToken}`,
+            '',
+            'Keyin:  hamroh kalendar gstatus',
+          ].join('\n'),
+        };
       },
     },
     {
@@ -185,6 +277,15 @@ export const calendarModule: Module = {
   ],
 
   jobs: [
+    {
+      name: 'kalendar.sync',
+      cron: '*/20 * * * *',
+      run: async (ctx) => {
+        if (!ctx.gcal.enabled) return 'ulanmagan';
+        const r = await syncGcal(ctx, 60);
+        return `olindi ${r.pulled}, yuborildi ${r.pushed}, bekor ${r.canceled}`;
+      },
+    },
     {
       name: 'kalendar.reminder',
       cron: '*/15 * * * *',

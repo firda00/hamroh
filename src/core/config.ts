@@ -19,6 +19,9 @@ export type TelKind = 'off' | 'cmd' | 'twilio';
 /** off — SMS yuborilmaydi · eskiz — Eskiz.uz · cmd — ixtiyoriy dastur. */
 export type SmsKind = 'off' | 'eskiz' | 'cmd';
 
+/** off — ulanmagan · oauth — shaxsiy hisob · service — xizmat hisobi (brauzersiz). */
+export type GcalKind = 'off' | 'oauth' | 'service';
+
 export type Config = {
   dbPath: string;
   tz: string;
@@ -67,6 +70,14 @@ export type Config = {
   eskizPassword: string;
   eskizFrom: string;
   eskizBase: string;
+  /** Google Calendar. */
+  gcal: GcalKind;
+  googleClientId: string;
+  googleClientSecret: string;
+  googleRefreshToken: string;
+  googleCalendarId: string;
+  googleServiceFile: string;
+  googleImpersonate: string;
   extraFeeds: string[];
   telegram: { token: string; chatId: string };
   outDir: string;
@@ -119,6 +130,13 @@ export function loadConfig(): Config {
     eskizPassword: env('ESKIZ_PASSWORD'),
     eskizFrom: env('ESKIZ_FROM', '4546'),
     eskizBase: env('ESKIZ_BASE', 'https://notify.eskiz.uz/api').replace(/[/]+$/, ''),
+    gcal: (['oauth', 'service'].includes(env('HAMROH_GCAL', 'off')) ? env('HAMROH_GCAL') : 'off') as GcalKind,
+    googleClientId: env('GOOGLE_CLIENT_ID'),
+    googleClientSecret: env('GOOGLE_CLIENT_SECRET'),
+    googleRefreshToken: env('GOOGLE_REFRESH_TOKEN'),
+    googleCalendarId: env('GOOGLE_CALENDAR_ID', 'primary'),
+    googleServiceFile: env('GOOGLE_SERVICE_ACCOUNT_FILE'),
+    googleImpersonate: env('GOOGLE_IMPERSONATE'),
     extraFeeds: env('HAMROH_NEWS_FEEDS').split(',').map((s) => s.trim()).filter(Boolean),
     telegram: { token: env('TELEGRAM_BOT_TOKEN'), chatId: env('TELEGRAM_CHAT_ID') },
     outDir: resolve(env('HAMROH_OUT', './out')),

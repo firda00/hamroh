@@ -129,6 +129,7 @@ async function main(argv: string[]): Promise<number> {
         `Gapirish:    ${ctx.tts.enabled ? ctx.tts.id : 'o‘chirilgan (HAMROH_TTS=off)'}`,
         `Ovozli buyruq: ${ctx.cfg.voiceCommands ? 'yoqilgan' : 'o‘chirilgan'}`,
         `SMS:         ${ctx.sms.enabled ? ctx.sms.id : 'ulanmagan (HAMROH_SMS=off)'}`,
+        `Kalendar:    ${ctx.gcal.enabled ? ctx.gcal.id : 'Google ulanmagan (HAMROH_GCAL=off)'}`,
         `Qo‘ng‘iroq:  ${ctx.tel.enabled ? ctx.tel.id : 'o‘chirilgan (HAMROH_TEL=off)'}`,
         `Telegram:    ${ctx.cfg.telegram.token ? 'token bor' : 'ulanmagan'}`,
         `Modullar:    ${modules.length} ta`,

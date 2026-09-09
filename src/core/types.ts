@@ -5,6 +5,7 @@ import type { SttProvider } from '../stt/provider.ts';
 import type { TtsProvider } from '../tts/provider.ts';
 import type { CallProvider } from '../tel/provider.ts';
 import type { SmsProvider } from '../sms/provider.ts';
+import type { GcalClient } from '../gcal/client.ts';
 
 export type Ctx = {
   cfg: Config;
@@ -14,6 +15,7 @@ export type Ctx = {
   tts: TtsProvider;
   tel: CallProvider;
   sms: SmsProvider;
+  gcal: GcalClient;
   now: Date;
 };
 
