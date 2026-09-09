@@ -10,6 +10,9 @@ import { makeGcal } from '../gcal/index.ts';
 import { loadConfig } from '../core/config.ts';
 import { detectCategory } from '../util/categories.ts';
 import { syncGcal, pushEvent, removeEvent } from '../modules/calendar-sync.ts';
+import { loadSkills, draftPath, activePath, ensureDirs, DRAFTS_DIR } from '../skills/registry.ts';
+import { runInSandbox } from '../skills/sandbox.ts';
+import { readdirSync, renameSync, unlinkSync } from 'node:fs';
 import { logger } from '../core/logger.ts';
 import * as views from './pages.ts';
 
@@ -110,11 +113,12 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
 
   const known =
     path === '/' ||
-    ['/kirish', '/chiqish', '/vazifa', '/kalendar', '/moliya', '/lid', '/sozlama'].includes(path) ||
+    ['/kirish', '/chiqish', '/vazifa', '/kalendar', '/moliya', '/lid', '/sozlama', '/navlar'].includes(path) ||
     path.startsWith('/vazifa/') ||
     path.startsWith('/kalendar/') ||
     path.startsWith('/moliya/') ||
     path.startsWith('/lid/') ||
+    path.startsWith('/navlar/') ||
     path.startsWith('/oauth/google');
   if (!known) return false;
 
@@ -273,6 +277,35 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
           return true;
         }
 
+        case '/navlar/yoq': {
+          const name = String(body.get('name') ?? '');
+          const from = draftPath(name);
+          if (!existsSync(from)) return (back(res, '/navlar', undefined, 'Qoralama topilmadi'), true);
+
+          const check = await runInSandbox(from);
+          if (!check.ok) return (back(res, '/navlar', undefined, `Tekshiruv o‘tmadi: ${check.error}`), true);
+
+          ensureDirs();
+          const to = activePath(name);
+          if (existsSync(to)) return (back(res, '/navlar', undefined, 'Bunday nom allaqachon faol'), true);
+          renameSync(from, to);
+          back(res, '/navlar', `"${name}" faollashtirildi`);
+          return true;
+        }
+
+        case '/navlar/ochir': {
+          const name = String(body.get('name') ?? '');
+          for (const file of [draftPath(name), activePath(name)]) {
+            if (existsSync(file)) {
+              unlinkSync(file);
+              back(res, '/navlar', `"${name}" o‘chirildi`);
+              return true;
+            }
+          }
+          back(res, '/navlar', undefined, 'Topilmadi');
+          return true;
+        }
+
         case '/lid/add': {
           const name = (body.get('name') ?? '').trim();
           if (!name) return (back(res, '/lid', undefined, 'Ism bo‘sh'), true);
@@ -316,6 +349,34 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
     case '/lid':
       html(res, views.leadsPage(ctx, csrf, flash));
       return true;
+    case '/navlar': {
+      const reg = await loadSkills();
+      const active = reg.skills.map((s) => ({
+        name: s.name,
+        origin: s.origin,
+        description: s.metadata.function.description,
+        params: Object.keys(s.metadata.function.parameters.properties).join(', '),
+      }));
+
+      const drafts = [];
+      if (existsSync(DRAFTS_DIR)) {
+        for (const f of readdirSync(DRAFTS_DIR).filter((x) => x.endsWith('.ts'))) {
+          const name = f.replace(/\.ts$/, '');
+          const file = draftPath(name);
+          const check = await runInSandbox(file);
+          drafts.push({
+            name,
+            code: readFileSync(file, 'utf8').slice(0, 4000),
+            check: check.ok ? `sandbox: o‘tdi (${check.ms} ms)` : `sandbox: ${check.error ?? 'xato'}`,
+            ok: check.ok,
+          });
+        }
+      }
+
+      html(res, views.skillsPage(active, drafts, reg.errors.map((e) => `${e.file}: ${e.reason}`), csrf, flash));
+      return true;
+    }
+
     case '/sozlama': {
       const uri = redirectUri(ctx, req);
       html(res, views.settingsPage(ctx, csrf, flash, '/oauth/google', uri));

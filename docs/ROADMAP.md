@@ -46,6 +46,15 @@ Rejalashtirilgan qo‘shimchalar:
 - [ ] Kunlik hisobotga qisqa matnli xulosa
 - [x] ~~Ovozli buyruq: ovozli xabar → modul buyrug‘i~~ (bajarildi: `gap` moduli)
 
+## Navyklar (plaginlar)
+
+- [x] ~~Modul-plaginlar: avtoyuklash, tools sxemasi, dispetcher~~ ([SKILLS.md](SKILLS.md))
+- [x] ~~Nativ tool calling (OpenAI-mos: Ollama, vLLM, LM Studio)~~
+- [x] ~~Qoralamalar: model yozadi, siz ko‘rasiz, siz yoqasiz~~
+- [x] ~~Sandbox: fayl, jarayon va sirlar bloklanadi~~
+- [ ] Claude uchun tools formati (hozir faqat OpenAI-mos endpoint)
+- [ ] Sandboxda tarmoqni ham bloklash (Node da `--allow-net` yo‘q — proksi orqali)
+
 ## Bosqich 3 — Tashqi integratsiyalar
 
 Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:

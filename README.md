@@ -104,6 +104,7 @@ npm run hamroh -- kun --html
 | `bot` | Telegram bot | `npm run bot` |
 | `qongiroq` | Telefon qo‘ng‘irog‘i | `hamroh qongiroq brifing` |
 | `sozlash` | Sozlash ustasi | `npm run sozlash` |
+| `navlar` | Navyklar (plaginlar) | `hamroh navlar list` |
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa sms +998... "matn"` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |
@@ -264,6 +265,7 @@ npm test && npm run typecheck
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
+- [docs/SKILLS.md](docs/SKILLS.md) — navyklar: plaginlar, tool calling, sandbox
 - [docs/WEB.md](docs/WEB.md) — veb-panel, xavfsizlik, HTTPS va OAuth manzili
 - [docs/VPS.md](docs/VPS.md) — serverga o‘rnatish, systemd, zaxira nusxa
 - [docs/GCALENDAR.md](docs/GCALENDAR.md) — Google Calendar (ikki tomonlama)

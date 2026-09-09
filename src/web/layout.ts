@@ -21,6 +21,7 @@ export const NAV: NavItem[] = [
   { href: '/kalendar', label: 'Kalendar' },
   { href: '/moliya', label: 'Moliya' },
   { href: '/lid', label: 'Lidlar' },
+  { href: '/navlar', label: 'Navyklar' },
   { href: '/sozlama', label: 'Sozlamalar' },
 ];
 
@@ -79,6 +80,9 @@ ul.plain { margin:0; padding-left:18px; } ul.plain li { margin:3px 0; }
 .bars div { display:grid; grid-template-columns:120px 1fr auto; gap:10px; align-items:center; font-size:14px; }
 .bars .track { background:var(--bg); border-radius:99px; height:9px; overflow:hidden; }
 .bars .fill { background:var(--accent); height:100%; }
+pre.code { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+  overflow-x:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; margin:10px 0 0; }
+details summary { cursor:pointer; color:var(--accent); font-size:14px; }
 footer { text-align:center; color:var(--muted); font-size:12px; padding:20px 0 40px; }
 `;
 

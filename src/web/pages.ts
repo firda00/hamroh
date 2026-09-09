@@ -261,6 +261,69 @@ export function leadsPage(ctx: Ctx, csrf: string, flash: Flash): string {
   );
 }
 
+// ------------------------------------------------------------------ navyklar
+
+export type SkillView = {
+  name: string;
+  origin: 'builtin' | 'user';
+  description: string;
+  params: string;
+};
+
+export type DraftView = { name: string; code: string; check: string; ok: boolean };
+
+export function skillsPage(
+  active: SkillView[],
+  drafts: DraftView[],
+  errors: string[],
+  csrf: string,
+  flash: Flash,
+): string {
+  const rows = active.map((s) => [
+    `<code>${esc(s.name)}</code>`,
+    s.origin === 'builtin' ? '<span class="pill">ichki</span>' : '<span class="pill ok">qo‘shilgan</span>',
+    esc(s.params || '—'),
+    esc(s.description),
+    s.origin === 'user'
+      ? `<form method="post" action="/navlar/ochir" style="margin:0">${csrfField(csrf)}<input type="hidden" name="name" value="${esc(s.name)}"/><button class="ghost">o‘chirish</button></form>`
+      : '',
+  ]);
+
+  const draftCards = drafts.length
+    ? drafts
+        .map(
+          (d) => `<section class="card">
+        <h2>${esc(d.name)} <span class="pill ${d.ok ? 'ok' : 'bad'}">${d.ok ? 'tekshiruv o‘tdi' : 'xato'}</span></h2>
+        <div class="muted" style="font-size:13px;margin-bottom:8px">${esc(d.check)}</div>
+        <details><summary>Kodni ko‘rish</summary><pre class="code">${esc(d.code)}</pre></details>
+        <form method="post" action="/navlar/yoq" class="row" style="margin-top:12px">
+          ${csrfField(csrf)}<input type="hidden" name="name" value="${esc(d.name)}"/>
+          <button ${d.ok ? '' : 'disabled'}>Faollashtirish</button>
+        </form>
+        <form method="post" action="/navlar/ochir" style="margin-top:8px">
+          ${csrfField(csrf)}<input type="hidden" name="name" value="${esc(d.name)}"/>
+          <button class="ghost">O‘chirish</button>
+        </form>
+      </section>`,
+        )
+        .join('')
+    : '';
+
+  const warn = `<div class="note"><b>Qoralamani faollashtirishdan oldin kodni o‘qing.</b>
+    Faollashgan navyk ilova huquqlari bilan ishlaydi — bazaga, SMS va telefonga kirish oladi.
+    Sandbox tekshiruvi fayl va jarayonni bloklaydi, lekin <b>tarmoqni bloklamaydi</b>.
+    Ko‘rik — asosiy himoya, avtomatik faollashtirish ataylab yo‘q.</div>`;
+
+  return page(
+    { title: 'Navyklar', subtitle: `${active.length} ta faol · ${drafts.length} ta qoralama`, path: '/navlar', flash },
+    card('Faol navyklar', table(['Nom', 'Manba', 'Argumentlar', 'Tavsif', ''], rows, 'Navyk yo‘q.')) +
+      (errors.length
+        ? card('Yuklanmagan fayllar', `<ul class="plain">${errors.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>`)
+        : '') +
+      (drafts.length ? `<h2 style="font-size:15px;margin:22px 0 10px">Qoralamalar</h2>${warn}${draftCards}` : card('Qoralamalar', '<div class="empty">Qoralama yo‘q.</div>')),
+  );
+}
+
 // ------------------------------------------------------------------ sozlamalar
 
 export function settingsPage(ctx: Ctx, csrf: string, flash: Flash, oauthUrl: string, redirectUri: string): string {

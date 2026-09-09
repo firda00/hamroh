@@ -15,6 +15,7 @@ import { assistantModule } from './assistant.ts';
 import { botModule } from './bot.ts';
 import { callModule } from './call.ts';
 import { setupModule } from './setup.ts';
+import { skillsModule } from './skills.ts';
 import { commsModule } from './comms.ts';
 import { recurringModule } from './recurring.ts';
 import { marketingModule } from './marketing.ts';
@@ -40,6 +41,7 @@ export const modules: Module[] = [
   botModule, //      Telegram bot
   callModule, //     telefon qo‘ng‘irog‘i
   setupModule, //    sozlash ustasi
+  skillsModule, //   navyklar (plaginlar)
   commsModule, // (11) qo'ng'iroq, SMS
   recurringModule, // (12) oylik to'lovlar
   marketingModule, // (13) marketing analitikasi
