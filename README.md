@@ -143,6 +143,20 @@ Telegramsiz sinash:
 npm run hamroh -- bot test "ertaga soat uchda uchrashuv qo‘y"
 ```
 
+## Veb-panel
+
+```bash
+npm run panel
+```
+
+Brauzerda `http://127.0.0.1:7391` — bosh sahifa (kunlik ko‘rsatkichlar, vazifalar,
+uchrashuvlar, to‘lovlar), vazifalar, kalendar, moliya, lidlar va sozlamalar.
+Telefondan ham qulay ochiladi.
+
+Kirish `HAMROH_WEB_TOKEN` bilan; panel standart holatda faqat `127.0.0.1` da
+tinglaydi. Google Calendar'ni ham shu yerdan bir bosishda ulash mumkin.
+Batafsil: [docs/WEB.md](docs/WEB.md).
+
 ## Avtomatik ishlash
 
 ```bash
@@ -250,6 +264,7 @@ npm test && npm run typecheck
 - [docs/ROADMAP.md](docs/ROADMAP.md) — bosqichlar rejasi
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
+- [docs/WEB.md](docs/WEB.md) — veb-panel, xavfsizlik, HTTPS va OAuth manzili
 - [docs/VPS.md](docs/VPS.md) — serverga o‘rnatish, systemd, zaxira nusxa
 - [docs/GCALENDAR.md](docs/GCALENDAR.md) — Google Calendar (ikki tomonlama)
 - [docs/SMS.md](docs/SMS.md) — SMS shlyuzi (Eskiz va boshqalar)

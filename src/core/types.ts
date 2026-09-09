@@ -8,6 +8,7 @@ import type { SmsProvider } from '../sms/provider.ts';
 import type { GcalClient } from '../gcal/client.ts';
 
 export type Ctx = {
+  /** OAuth dan keyin qayta yuklanishi mumkin. */
   cfg: Config;
   db: Db;
   llm: LlmProvider;

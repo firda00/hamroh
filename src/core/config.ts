@@ -78,6 +78,12 @@ export type Config = {
   googleCalendarId: string;
   googleServiceFile: string;
   googleImpersonate: string;
+  /** Veb-panel. Token bo'sh bo'lsa panel umuman ochilmaydi. */
+  webToken: string;
+  webHost: string;
+  webPort: number;
+  /** Ommaviy manzil — OAuth qaytish URL i shundan yasaladi. */
+  webBase: string;
   extraFeeds: string[];
   telegram: { token: string; chatId: string };
   outDir: string;
@@ -137,6 +143,10 @@ export function loadConfig(): Config {
     googleCalendarId: env('GOOGLE_CALENDAR_ID', 'primary'),
     googleServiceFile: env('GOOGLE_SERVICE_ACCOUNT_FILE'),
     googleImpersonate: env('GOOGLE_IMPERSONATE'),
+    webToken: env('HAMROH_WEB_TOKEN'),
+    webHost: env('HAMROH_WEB_HOST', '127.0.0.1'),
+    webPort: Number(env('HAMROH_PORT', '7391')) || 7391,
+    webBase: env('HAMROH_WEB_BASE'),
     extraFeeds: env('HAMROH_NEWS_FEEDS').split(',').map((s) => s.trim()).filter(Boolean),
     telegram: { token: env('TELEGRAM_BOT_TOKEN'), chatId: env('TELEGRAM_CHAT_ID') },
     outDir: resolve(env('HAMROH_OUT', './out')),

@@ -73,7 +73,7 @@ if [ "$UPDATE_ONLY" -eq 1 ]; then
     sudo -u "$USER_NAME" npm --prefix "$DIR" ci --omit=dev --silent >/dev/null 2>&1 || true
   fi
 
-  for unit in hamroh-bot hamroh-daemon; do
+  for unit in hamroh-bot hamroh-daemon hamroh-web; do
     if systemctl is-enabled --quiet "$unit" 2>/dev/null; then
       systemctl restart "$unit"
       ok "$unit qayta ishga tushdi"
@@ -201,8 +201,25 @@ UNIT
 
 write_unit "hamroh-bot"    "Hamroh — Telegram bot"        "${DIR}/src/cli.ts bot start"
 write_unit "hamroh-daemon" "Hamroh — rejalashtiruvchi"    "${DIR}/src/daemon.ts"
+write_unit "hamroh-web"    "Hamroh — veb-panel"           "${DIR}/src/server.ts"
 
 systemctl daemon-reload
+
+# Veb-panel uchun kalit — bo'lmasa yaratamiz (panel kalitsiz umuman ochilmaydi)
+if ! grep -q '^HAMROH_WEB_TOKEN=.\+' "$DIR/.env"; then
+  WEB_TOKEN="$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 28)"
+  if grep -q '^HAMROH_WEB_TOKEN=' "$DIR/.env"; then
+    sed -i "s|^HAMROH_WEB_TOKEN=.*|HAMROH_WEB_TOKEN=${WEB_TOKEN}|" "$DIR/.env"
+  else
+    printf '\nHAMROH_WEB_TOKEN=%s\n' "$WEB_TOKEN" >> "$DIR/.env"
+  fi
+  ok "veb-panel kaliti yaratildi"
+  PANEL_TOKEN="$WEB_TOKEN"
+else
+  PANEL_TOKEN="$(grep '^HAMROH_WEB_TOKEN=' "$DIR/.env" | cut -d= -f2-)"
+fi
+
+systemctl enable --now hamroh-web >/dev/null 2>&1 || systemctl restart hamroh-web
 
 if grep -q '^TELEGRAM_BOT_TOKEN=.\+' "$DIR/.env"; then
   systemctl enable --now hamroh-bot hamroh-daemon >/dev/null 2>&1
@@ -246,7 +263,10 @@ cat <<INFO
   Sozlama:    ${DIR}/.env
   Baza:       ${DIR}/data/hamroh.db
 
-  Holat:      systemctl status hamroh-bot hamroh-daemon
+  Panel:      http://127.0.0.1:7391   kalit: ${PANEL_TOKEN}
+              (tashqaridan: ssh -N -L 7391:127.0.0.1:7391 user@server)
+
+  Holat:      systemctl status hamroh-bot hamroh-daemon hamroh-web
   Jurnal:     journalctl -u hamroh-bot -f
   Qayta:      systemctl restart hamroh-bot
   Tekshirish: sudo -u ${USER_NAME} node ${DIR}/src/cli.ts doctor

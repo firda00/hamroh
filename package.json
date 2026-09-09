@@ -8,6 +8,7 @@
   "bin": { "hamroh": "./src/cli.ts" },
   "scripts": {
     "hamroh": "node src/cli.ts",
+    "panel": "node src/server.ts",
     "serve": "node src/server.ts",
     "daemon": "node src/daemon.ts",
     "bot": "node src/cli.ts bot start",

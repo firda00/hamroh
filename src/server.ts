@@ -11,6 +11,7 @@ import { logger } from './core/logger.ts';
 
 const log = logger('server');
 const PORT = Number(process.env['HAMROH_PORT'] ?? 7391);
+const HOST = process.env['HAMROH_WEB_HOST'] ?? '127.0.0.1';
 
 const json = (res: import('node:http').ServerResponse, code: number, body: unknown): void => {
   const text = JSON.stringify(body, null, 2);
@@ -37,6 +38,10 @@ async function main(): Promise<void> {
       const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
       ctx.now = new Date();
       try {
+        // Veb-panel — o'z yo'llarini o'zi hal qiladi
+        const { handleWeb } = await import('./web/router.ts');
+        if (await handleWeb(ctx, req, res)) return;
+
         if (url.pathname === '/health') {
           return json(res, 200, { ok: true, tz: ctx.cfg.tz, llm: ctx.llm.id, modules: modules.length });
         }
@@ -114,7 +119,11 @@ async function main(): Promise<void> {
     })();
   });
 
-  server.listen(PORT, '127.0.0.1', () => log.info(`API: http://127.0.0.1:${PORT}`));
+  server.listen(PORT, HOST, () => {
+    log.info(`Panel: http://${HOST}:${PORT}`);
+    if (!ctx.cfg.webToken) log.warn('HAMROH_WEB_TOKEN yo‘q — veb-panel o‘chirilgan, faqat API ishlaydi.');
+    if (HOST !== '127.0.0.1') log.warn(`Panel tashqi tarmoqqa ochiq (${HOST}) — HTTPS va kuchli token shart.`);
+  });
   process.on('SIGINT', () => {
     server.close();
     ctx.db.close();

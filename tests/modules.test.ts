@@ -714,3 +714,112 @@ test('Google Calendar: kun bo‘yi hodisa va xatolar', async () => {
     ctx.db.close();
   }
 });
+
+test('veb-panel: kalitsiz kirib bo‘lmaydi, CSRF tekshiriladi', async () => {
+  const { createServer } = await import('node:http');
+  const { handleWeb } = await import('../src/web/router.ts');
+  const { createHash } = await import('node:crypto');
+
+  const ctx = ctxFor();
+  ctx.cfg.webToken = 'sinov-kalit';
+
+  const server = createServer((req, res) => {
+    void handleWeb(ctx, req, res).then((handled) => {
+      if (!handled) {
+        res.writeHead(404);
+        res.end('yo‘q');
+      }
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const session = createHash('sha256').update('session:sinov-kalit').digest('hex');
+  const csrf = createHash('sha256').update('csrf:sinov-kalit').digest('hex');
+
+  try {
+    // 1. Kalitsiz — kirish sahifasi, 401
+    const guest = await fetch(`${base}/`, { redirect: 'manual' });
+    assert.equal(guest.status, 401);
+    assert.ok((await guest.text()).includes('Kirish'));
+
+    // 2. Noto'g'ri kalit
+    const wrong = await fetch(`${base}/kirish`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'token=xato',
+      redirect: 'manual',
+    });
+    assert.equal(wrong.status, 401);
+
+    // 3. To'g'ri kalit -> cookie
+    const login = await fetch(`${base}/kirish`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'token=sinov-kalit',
+      redirect: 'manual',
+    });
+    assert.equal(login.status, 302);
+    assert.ok(login.headers.get('set-cookie')?.includes(session));
+    assert.ok(login.headers.get('set-cookie')?.includes('HttpOnly'), 'cookie HttpOnly bo‘lishi kerak');
+
+    const cookie = `hamroh_session=${session}`;
+
+    // 4. Sahifalar ochiladi
+    for (const path of ['/', '/vazifa', '/kalendar', '/moliya', '/lid', '/sozlama']) {
+      const res = await fetch(`${base}${path}`, { headers: { cookie } });
+      assert.equal(res.status, 200, `${path} ochilmadi`);
+      assert.ok((await res.text()).includes('<h1>'), `${path} bo‘sh`);
+    }
+
+    // 5. CSRF tokensiz o'zgartirish rad etiladi
+    const noCsrf = await fetch(`${base}/vazifa/add`, {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'title=Yomon',
+      redirect: 'manual',
+    });
+    assert.ok(noCsrf.headers.get('location')?.includes('CSRF'), noCsrf.headers.get('location') ?? '');
+    assert.equal(ctx.db.get<{ n: number }>(`SELECT COUNT(*) n FROM tasks`)?.n, 0, 'CSRF-siz yozuv kirmasligi kerak');
+
+    // 6. To'g'ri CSRF bilan qo'shiladi
+    const ok = await fetch(`${base}/vazifa/add`, {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ _t: csrf, title: 'Panel vazifasi', due: 'ertaga 10:00', priority: '1' }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(ok.status, 302);
+    const saved = ctx.db.get<{ title: string; priority: number }>(`SELECT title, priority FROM tasks ORDER BY id DESC LIMIT 1`);
+    assert.equal(saved?.title, 'Panel vazifasi');
+    assert.equal(saved?.priority, 1);
+
+    // 7. Moliya yozuvi — toifa avtomatik
+    await fetch(`${base}/moliya/add`, {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ _t: csrf, kind: 'expense', amount: '250000', note: 'taksiga' }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(
+      ctx.db.get<{ category: string; source: string }>(`SELECT category, source FROM ledger ORDER BY id DESC LIMIT 1`)?.category,
+      'transport',
+    );
+  } finally {
+    server.close();
+    ctx.db.close();
+  }
+});
+
+test('veb-panel: token bo‘lmasa umuman ochilmaydi', async () => {
+  const { handleWeb } = await import('../src/web/router.ts');
+  const ctx = ctxFor();
+  ctx.cfg.webToken = '';
+
+  const req = { url: '/', method: 'GET', headers: {} } as never;
+  let wrote = false;
+  const res = { writeHead: () => { wrote = true; }, end: () => {} } as never;
+
+  assert.equal(await handleWeb(ctx, req, res), false, 'panel o‘chirilgan bo‘lishi kerak');
+  assert.equal(wrote, false);
+  ctx.db.close();
+});
