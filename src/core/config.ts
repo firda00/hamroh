@@ -16,6 +16,9 @@ export type TtsKind = 'off' | 'http' | 'cmd';
 /** off — qo'ng'iroq yo'q · cmd — Asterisk/mahalliy shlyuz · twilio — Twilio API. */
 export type TelKind = 'off' | 'cmd' | 'twilio';
 
+/** off — SMS yuborilmaydi · eskiz — Eskiz.uz · cmd — ixtiyoriy dastur. */
+export type SmsKind = 'off' | 'eskiz' | 'cmd';
+
 export type Config = {
   dbPath: string;
   tz: string;
@@ -55,6 +58,15 @@ export type Config = {
   twilioSid: string;
   twilioToken: string;
   twilioFrom: string;
+  /** SMS shlyuzi. */
+  sms: SmsKind;
+  smsCmd: string;
+  /** Bir kunda yuborish mumkin bo'lgan SMS soni — nazoratsiz sarfga qarshi. */
+  smsDailyLimit: number;
+  eskizEmail: string;
+  eskizPassword: string;
+  eskizFrom: string;
+  eskizBase: string;
   extraFeeds: string[];
   telegram: { token: string; chatId: string };
   outDir: string;
@@ -100,6 +112,13 @@ export function loadConfig(): Config {
     twilioSid: env('TWILIO_ACCOUNT_SID'),
     twilioToken: env('TWILIO_AUTH_TOKEN'),
     twilioFrom: env('TWILIO_FROM'),
+    sms: (['eskiz', 'cmd'].includes(env('HAMROH_SMS', 'off')) ? env('HAMROH_SMS') : 'off') as SmsKind,
+    smsCmd: env('HAMROH_SMS_CMD'),
+    smsDailyLimit: Number(env('HAMROH_SMS_DAILY_LIMIT', '50')) || 50,
+    eskizEmail: env('ESKIZ_EMAIL'),
+    eskizPassword: env('ESKIZ_PASSWORD'),
+    eskizFrom: env('ESKIZ_FROM', '4546'),
+    eskizBase: env('ESKIZ_BASE', 'https://notify.eskiz.uz/api').replace(/[/]+$/, ''),
     extraFeeds: env('HAMROH_NEWS_FEEDS').split(',').map((s) => s.trim()).filter(Boolean),
     telegram: { token: env('TELEGRAM_BOT_TOKEN'), chatId: env('TELEGRAM_CHAT_ID') },
     outDir: resolve(env('HAMROH_OUT', './out')),

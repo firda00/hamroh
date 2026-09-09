@@ -88,13 +88,13 @@ export async function runWizard(
   };
 
   // ---------- 1. Asosiy ----------
-  log('\n1/5 — Asosiy sozlamalar');
+  log('\n1/6 — Asosiy sozlamalar');
   set('HAMROH_CITY', await ask('Shahar (ob-havo uchun)', cur('HAMROH_CITY', 'Tashkent')));
   set('HAMROH_TZ', await ask('Vaqt zonasi', cur('HAMROH_TZ', 'Asia/Tashkent')));
   set('HAMROH_CURRENCY', await ask('Asosiy valyuta', cur('HAMROH_CURRENCY', 'UZS')));
 
   // ---------- 2. Telegram ----------
-  log('\n2/5 — Telegram (bo‘sh qoldirsangiz o‘tkazib yuboriladi)');
+  log('\n2/6 — Telegram (bo‘sh qoldirsangiz o‘tkazib yuboriladi)');
   log('   Token: Telegramda @BotFather ga /newbot yozing');
   const token = await ask('TELEGRAM_BOT_TOKEN', cur('TELEGRAM_BOT_TOKEN'));
 
@@ -125,7 +125,7 @@ export async function runWizard(
   }
 
   // ---------- 3. LLM ----------
-  log('\n3/5 — Aqlli rejim (LLM)');
+  log('\n3/6 — Aqlli rejim (LLM)');
   log('   rules — LLM‘siz, bepul (standart) · local — o‘z serveringiz · anthropic — Claude API');
   const llm = (await ask('Rejim [rules/local/anthropic]', cur('HAMROH_LLM', 'rules'))).toLowerCase();
 
@@ -147,7 +147,7 @@ export async function runWizard(
   }
 
   // ---------- 4. Ovoz ----------
-  log('\n4/5 — Ovoz (ixtiyoriy)');
+  log('\n4/6 — Ovoz (ixtiyoriy)');
   const wantStt = (await ask('Ovozli xabarlarni matnga o‘girish kerakmi? [ha/yo‘q]', cur('HAMROH_STT') === 'local' ? 'ha' : 'yo‘q'))
     .toLowerCase()
     .startsWith('h');
@@ -169,8 +169,22 @@ export async function runWizard(
     set('HAMROH_STT', 'off');
   }
 
-  // ---------- 5. Telefon ----------
-  log('\n5/5 — Telefon qo‘ng‘irog‘i (ixtiyoriy)');
+  // ---------- 5. SMS ----------
+  log('\n5/6 — SMS shlyuzi (ixtiyoriy)');
+  const wantSms = (await ask('SMS yuborish kerakmi? [eskiz/yo‘q]', cur('HAMROH_SMS', 'yo‘q')))
+    .toLowerCase();
+  if (wantSms === 'eskiz') {
+    set('HAMROH_SMS', 'eskiz');
+    set('ESKIZ_EMAIL', await ask('Eskiz email', cur('ESKIZ_EMAIL')));
+    set('ESKIZ_PASSWORD', await ask('Eskiz parol (ekranda ko‘rinadi)', cur('ESKIZ_PASSWORD')));
+    set('ESKIZ_FROM', await ask('Jo‘natuvchi nomi (4546 — sinov)', cur('ESKIZ_FROM', '4546')));
+    notes.push('Eskiz ixtiyoriy matn yubortirmaydi — shablon moderatsiyadan o‘tishi kerak (docs/SMS.md)');
+  } else {
+    set('HAMROH_SMS', 'off');
+  }
+
+  // ---------- 6. Telefon ----------
+  log('\n6/6 — Telefon qo‘ng‘irog‘i (ixtiyoriy)');
   const myNumber = await ask('O‘z raqamingiz (+998...), bo‘sh = qo‘ng‘iroq yo‘q', cur('HAMROH_TEL_MY_NUMBER'));
   if (myNumber) {
     set('HAMROH_TEL_MY_NUMBER', normalizeNumber(myNumber));

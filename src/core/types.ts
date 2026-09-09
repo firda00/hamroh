@@ -4,6 +4,7 @@ import type { LlmProvider } from '../llm/provider.ts';
 import type { SttProvider } from '../stt/provider.ts';
 import type { TtsProvider } from '../tts/provider.ts';
 import type { CallProvider } from '../tel/provider.ts';
+import type { SmsProvider } from '../sms/provider.ts';
 
 export type Ctx = {
   cfg: Config;
@@ -12,6 +13,7 @@ export type Ctx = {
   stt: SttProvider;
   tts: TtsProvider;
   tel: CallProvider;
+  sms: SmsProvider;
   now: Date;
 };
 

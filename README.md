@@ -104,7 +104,7 @@ npm run hamroh -- kun --html
 | `bot` | Telegram bot | `npm run bot` |
 | `qongiroq` | Telefon qo‘ng‘irog‘i | `hamroh qongiroq brifing` |
 | `sozlash` | Sozlash ustasi | `npm run sozlash` |
-| `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa calls --missed` |
+| `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa sms +998... "matn"` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing report --days=30 --html` |
 | `mahsulot` | (14) Mahsulot va foyda | `hamroh mahsulot top` |
@@ -251,6 +251,7 @@ npm test && npm run typecheck
 - [docs/LLM.md](docs/LLM.md) — LLM ulash va provayder interfeysi
 - [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) — lokal model: qaysi model, qancha VRAM, qancha pul
 - [docs/VPS.md](docs/VPS.md) — serverga o‘rnatish, systemd, zaxira nusxa
+- [docs/SMS.md](docs/SMS.md) — SMS shlyuzi (Eskiz va boshqalar)
 - [docs/CALLS.md](docs/CALLS.md) — telefon qo‘ng‘irog‘i (Asterisk, Twilio)
 - [docs/TELEGRAM.md](docs/TELEGRAM.md) — Telegram bot, xavfsizlik, webhook va hosting (Vercel haqida ham)
 - [docs/VOICE.md](docs/VOICE.md) — ovoz: eshitish (Whisper), ovozli buyruqlar, gapirish (TTS)

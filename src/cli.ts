@@ -128,6 +128,8 @@ async function main(argv: string[]): Promise<number> {
         `Ovoz (STT):  ${sttLine}`,
         `Gapirish:    ${ctx.tts.enabled ? ctx.tts.id : 'o‘chirilgan (HAMROH_TTS=off)'}`,
         `Ovozli buyruq: ${ctx.cfg.voiceCommands ? 'yoqilgan' : 'o‘chirilgan'}`,
+        `SMS:         ${ctx.sms.enabled ? ctx.sms.id : 'ulanmagan (HAMROH_SMS=off)'}`,
+        `Qo‘ng‘iroq:  ${ctx.tel.enabled ? ctx.tel.id : 'o‘chirilgan (HAMROH_TEL=off)'}`,
         `Telegram:    ${ctx.cfg.telegram.token ? 'token bor' : 'ulanmagan'}`,
         `Modullar:    ${modules.length} ta`,
         `Vazifalar:   ${allJobs(modules).length} ta cron`,

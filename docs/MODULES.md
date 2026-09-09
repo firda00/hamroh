@@ -222,8 +222,10 @@ uni buyruqqa aylantirish LLM ulangandan keyin (bosqich 2).
 
 Kuniga ikki marta (12:00, 18:00) javobsiz qo‘ng‘iroqlar bo‘yicha eslatma keladi.
 
-**◐ SMS yuborish:** SMS shlyuzi (Eskiz, Playmobile va h.k.) shartnomasini talab qiladi —
-bosqich 3. Hozir SMS navbatga yoziladi va ko‘rinadi.
+**SMS yuborish — ✅** Eskiz.uz orqali ishlaydi (`HAMROH_SMS=eskiz`). Xabar avval navbatga
+tushadi, keyin yuboriladi — shlyuz javob bermasa yo‘qolmaydi va qayta uriniladi.
+Kunlik chegara (`HAMROH_SMS_DAILY_LIMIT`, standart 50) nazoratsiz sarfdan himoya qiladi.
+Boshqa shlyuzlar `HAMROH_SMS=cmd` orqali. Batafsil: [SMS.md](SMS.md).
 
 ---
 

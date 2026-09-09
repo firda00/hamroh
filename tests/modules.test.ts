@@ -9,6 +9,7 @@ import { rulesProvider } from '../src/llm/rules.ts';
 import { disabledStt } from '../src/stt/provider.ts';
 import { disabledTts } from '../src/tts/provider.ts';
 import { disabledTel } from '../src/tel/provider.ts';
+import { disabledSms } from '../src/sms/provider.ts';
 import { loadConfig } from '../src/core/config.ts';
 import { totals, savingTips } from '../src/modules/finance.ts';
 import { dayKpis, weakSpots } from '../src/modules/report.ts';
@@ -25,7 +26,7 @@ const NOW = new Date('2026-09-08T06:00:00.000Z'); // Toshkentda 11:00
 function ctxFor(): Ctx {
   process.env['HAMROH_DB'] = ':memory:';
   const cfg = { ...loadConfig(), dbPath: ':memory:', tz: 'Asia/Tashkent', currency: 'UZS', offline: true };
-  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), tel: disabledTel(), now: NOW };
+  return { cfg, db: openDb(':memory:'), llm: rulesProvider(), stt: disabledStt(), tts: disabledTts(), tel: disabledTel(), sms: disabledSms(), now: NOW };
 }
 
 const iso = (daysAgo: number, h = 12): string =>
@@ -367,6 +368,7 @@ test('sozlash ustasi: javoblar .env ga to‘g‘ri yoziladi', async () => {
     '',                 // telegram token — o'tkazib yuboriladi
     'rules',            // LLM
     'yo‘q',             // STT kerak emas
+    'yo‘q',             // SMS kerak emas
     '901234567',        // telefon raqami
   ];
   let i = 0;
@@ -382,6 +384,7 @@ test('sozlash ustasi: javoblar .env ga to‘g‘ri yoziladi', async () => {
 
     assert.equal(readEnvValue(after, 'HAMROH_CITY'), 'Samarqand');
     assert.equal(readEnvValue(after, 'HAMROH_STT'), 'off');
+    assert.equal(readEnvValue(after, 'HAMROH_SMS'), 'off');
     assert.equal(readEnvValue(after, 'HAMROH_TEL_MY_NUMBER'), '+998901234567', 'raqam normallashishi kerak');
     assert.ok(after.includes('# izoh'), 'izohlar saqlanishi kerak');
     assert.equal(readEnvValue(after, 'TELEGRAM_BOT_TOKEN'), '', 'bo‘sh token yozilmasligi kerak');
@@ -418,5 +421,137 @@ test('moliya: toifa matndan avtomatik aniqlanadi', async () => {
   const inCmd = financeModule.commands.find((c) => c.name === 'in');
   await inCmd?.run(ctx, ['1000000', 'kurs to‘lovi']);
   assert.equal(ctx.db.get<{ category: string }>(`SELECT category FROM ledger ORDER BY id DESC LIMIT 1`)?.category, 'savdo');
+  ctx.db.close();
+});
+
+test('SMS: Eskiz zanjiri — login, yuborish, token keshi, 401 da qayta kirish', async () => {
+  const { createServer } = await import('node:http');
+  const { eskizSms } = await import('../src/sms/eskiz.ts');
+  const { queueSms, flushSms, sentToday } = await import('../src/modules/comms.ts');
+
+  let logins = 0;
+  let sends = 0;
+  let rejectOnce = false;
+  const seen: { phone: string; message: string; from: string }[] = [];
+
+  const server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (c) => chunks.push(c as Buffer));
+    req.on('end', () => {
+      const body = Buffer.concat(chunks).toString('latin1');
+      const field = (name: string): string =>
+        body.match(new RegExp(`name="${name}"\r?\n\r?\n([^\r]*)`))?.[1] ?? '';
+      const auth = req.headers.authorization ?? '';
+      res.setHeader('content-type', 'application/json');
+
+      if (req.url?.endsWith('/auth/login')) {
+        logins++;
+        res.writeHead(200);
+        res.end(JSON.stringify({ data: { token: `tok-${logins}` } }));
+        return;
+      }
+      if (req.url?.endsWith('/user/get-limit')) {
+        res.writeHead(200);
+        res.end(JSON.stringify({ data: { balance: 1234 } }));
+        return;
+      }
+      if (req.url?.endsWith('/message/sms/send')) {
+        if (rejectOnce && auth === 'Bearer tok-1') {
+          rejectOnce = false;
+          res.writeHead(401);
+          res.end(JSON.stringify({ message: 'Unauthorized' }));
+          return;
+        }
+        sends++;
+        seen.push({ phone: field('mobile_phone'), message: field('message'), from: field('from') });
+        res.writeHead(200);
+        res.end(JSON.stringify({ id: `msg-${sends}`, status: 'waiting' }));
+        return;
+      }
+      res.writeHead(404);
+      res.end('{}');
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as { port: number }).port;
+
+  const ctx = ctxFor();
+  ctx.sms = eskizSms({
+    db: ctx.db,
+    email: 'a@b.uz',
+    password: 'parol',
+    from: '4546',
+    base: `http://127.0.0.1:${port}/api`,
+  });
+
+  try {
+    // 1. Navbat -> yuborish
+    queueSms(ctx, '+998 90 123-45-67', 'Ertaga soat 10 da kutamiz');
+    queueSms(ctx, '901112233', 'Ikkinchi xabar');
+    const r1 = await flushSms(ctx);
+    assert.equal(r1.sent, 2, r1.lines.join(' | '));
+    assert.equal(r1.failed, 0);
+    assert.equal(logins, 1, 'token keshlanishi kerak — bitta login');
+    assert.equal(seen[0]?.phone, '998901234567', 'raqam plyussiz bo‘lishi kerak');
+    assert.equal(seen[0]?.from, '4546');
+
+    const row = ctx.db.get<{ status: string; external_id: string; sent_at: string }>(
+      `SELECT status, external_id, sent_at FROM messages WHERE channel='sms' ORDER BY id LIMIT 1`,
+    );
+    assert.equal(row?.status, 'yuborildi');
+    assert.equal(row?.external_id, 'msg-1');
+    assert.ok(row?.sent_at);
+    assert.equal(sentToday(ctx), 2);
+
+    // 2. Token eskirsa — qayta kiradi va xabar baribir ketadi
+    rejectOnce = true;
+    queueSms(ctx, '901112233', 'Uchinchi');
+    const r2 = await flushSms(ctx);
+    assert.equal(r2.sent, 1, r2.lines.join(' | '));
+    assert.equal(logins, 2, '401 dan keyin qayta login bo‘lishi kerak');
+
+    // 3. Kunlik chegara
+    ctx.cfg.smsDailyLimit = 3;
+    queueSms(ctx, '901112233', 'To‘rtinchi');
+    const r3 = await flushSms(ctx);
+    assert.equal(r3.sent, 0, 'chegaradan oshmasligi kerak');
+    assert.ok(r3.lines[0]?.includes('chegara'), r3.lines[0]);
+    assert.equal(
+      ctx.db.get<{ status: string }>(`SELECT status FROM messages ORDER BY id DESC LIMIT 1`)?.status,
+      'navbatda',
+      'chegara tufayli qolgan xabar navbatda turishi kerak',
+    );
+
+    // 4. Balans
+    assert.equal(await ctx.sms.balance?.(), '1234');
+  } finally {
+    server.close();
+    ctx.db.close();
+  }
+});
+
+test('SMS: xato bo‘lsa xabar yo‘qolmaydi, keyin qayta uriniladi', async () => {
+  const { queueSms, flushSms, pendingSms } = await import('../src/modules/comms.ts');
+  const ctx = ctxFor();
+
+  let fail = true;
+  ctx.sms = {
+    id: 'test',
+    enabled: true,
+    send: () => (fail ? Promise.reject(new Error('shablon mos emas')) : Promise.resolve({ ok: true, id: 'x1', provider: 'test' })),
+  };
+
+  queueSms(ctx, '901112233', 'Salom');
+  const bad = await flushSms(ctx);
+  assert.equal(bad.failed, 1);
+  const stored = ctx.db.get<{ status: string; error: string }>(`SELECT status, error FROM messages ORDER BY id DESC LIMIT 1`);
+  assert.equal(stored?.status, 'xato');
+  assert.ok(stored?.error.includes('shablon'));
+  assert.equal(pendingSms(ctx).length, 1, 'xato xabar navbatda qolishi kerak');
+
+  fail = false;
+  const good = await flushSms(ctx);
+  assert.equal(good.sent, 1, 'keyingi urinishda ketishi kerak');
+  assert.equal(pendingSms(ctx).length, 0);
   ctx.db.close();
 });

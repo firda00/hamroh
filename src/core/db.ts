@@ -53,6 +53,9 @@ export function openDb(path: string): Db {
     media_id: 'TEXT',
     duration_sec: 'INTEGER',
     transcribed_at: 'TEXT',
+    status: "TEXT NOT NULL DEFAULT 'navbatda'",
+    sent_at: 'TEXT',
+    error: 'TEXT',
   });
 
   return {
