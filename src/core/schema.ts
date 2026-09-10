@@ -257,4 +257,51 @@ CREATE TABLE IF NOT EXISTS job_runs (
   message TEXT,
   UNIQUE(job, slot)
 );
+
+-- Rol paketlari: bajarilgan ish qadamlari
+CREATE TABLE IF NOT EXISTS role_runs (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  role        TEXT NOT NULL,
+  step        TEXT NOT NULL,
+  slot        TEXT NOT NULL,           -- kun/hafta uyasi: bir marta bajarilsin
+  started_at  TEXT NOT NULL,
+  finished_at TEXT,
+  status      TEXT NOT NULL,           -- bajarildi | tasdiq_kutmoqda | rad_etildi | bloklandi | xato
+  summary     TEXT,
+  UNIQUE(role, step, slot)
+);
+CREATE INDEX IF NOT EXISTS idx_role_runs ON role_runs(role, started_at);
+
+-- Tasdiq nuqtalari: agent to‘xtab, odamdan ruxsat so‘raydi
+CREATE TABLE IF NOT EXISTS role_approvals (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  role       TEXT NOT NULL,
+  step       TEXT NOT NULL,
+  action     TEXT NOT NULL,            -- modul:buyruq
+  args       TEXT NOT NULL,            -- JSON massiv
+  reason     TEXT NOT NULL,
+  preview    TEXT,
+  created_at TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'kutilmoqda',
+  decided_at TEXT,
+  decided_by TEXT,
+  note       TEXT,
+  result     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_role_appr ON role_approvals(status, created_at);
+
+-- O'zgarmas jurnal. Har bir yozuv oldingisining hash'iga bog'lanadi:
+-- bitta qatorni o'zgartirsangiz zanjir uziladi va tekshiruv buni ko'rsatadi.
+CREATE TABLE IF NOT EXISTS audit_events (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts        TEXT NOT NULL,
+  role      TEXT NOT NULL,
+  actor     TEXT NOT NULL,             -- agent | odam | tizim
+  event     TEXT NOT NULL,             -- qadam.boshlandi, ruxsat.rad, tasdiq.berildi ...
+  subject   TEXT,
+  detail    TEXT,
+  prev_hash TEXT NOT NULL,
+  hash      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit ON audit_events(role, ts);
 `;

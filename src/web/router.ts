@@ -15,6 +15,13 @@ import { runInSandbox } from '../skills/sandbox.ts';
 import { readdirSync, renameSync, unlinkSync } from 'node:fs';
 import { logger } from '../core/logger.ts';
 import * as views from './pages.ts';
+import { byRoleId } from '../roles/index.ts';
+import { pendingApprovals, approve, reject } from '../roles/runner.ts';
+import { evaluateAll, scoreOf } from '../roles/kpi.ts';
+import { verifyChain, recent, record } from '../roles/audit.ts';
+import { isActive } from '../modules/roles.ts';
+import { setting } from '../core/db.ts';
+import { dateKey, addDays, stamp } from '../util/date.ts';
 import { safeEqual } from './guard.ts';
 
 /**
@@ -108,12 +115,13 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
 
   const known =
     path === '/' ||
-    ['/kirish', '/chiqish', '/vazifa', '/kalendar', '/moliya', '/lid', '/sozlama', '/navlar'].includes(path) ||
+    ['/kirish', '/chiqish', '/vazifa', '/kalendar', '/moliya', '/lid', '/sozlama', '/navlar', '/rol'].includes(path) ||
     path.startsWith('/vazifa/') ||
     path.startsWith('/kalendar/') ||
     path.startsWith('/moliya/') ||
     path.startsWith('/lid/') ||
     path.startsWith('/navlar/') ||
+    path.startsWith('/rol/') ||
     path.startsWith('/oauth/google');
   if (!known) return false;
 
@@ -278,6 +286,57 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
           return true;
         }
 
+        case '/rol/yoq':
+        case '/rol/ochir': {
+          const id = String(body.get('id') ?? '');
+          const pack = byRoleId(id);
+          if (!pack) return (back(res, '/rol', undefined, 'Bunday rol yo‘q'), true);
+          const on = path === '/rol/yoq';
+          setting.set(ctx.db, `rol:${pack.id}:faol`, on ? '1' : '0');
+          record(ctx.db, ctx.now, {
+            role: pack.id,
+            actor: 'odam',
+            event: on ? 'rol.yoqildi' : 'rol.to‘xtatildi',
+            subject: 'veb-panel',
+          });
+          back(res, '/rol', on ? `${pack.name} yoqildi` : `${pack.name} to‘xtatildi`);
+          return true;
+        }
+
+        case '/rol/tasdiq': {
+          const id = Number(body.get('id') ?? 0);
+          const row = ctx.db.get<{ role: string }>('SELECT role FROM role_approvals WHERE id=?', id);
+          const pack = row ? byRoleId(row.role) : undefined;
+          if (!pack) return (back(res, '/rol', undefined, `#${id} topilmadi`), true);
+          try {
+            const out = await approve(ctx, pack, id, 'panel');
+            back(
+              res,
+              '/rol',
+              out.status === 'bajarildi' ? `#${id} bajarildi: ${out.summary}` : undefined,
+              out.status === 'bajarildi' ? undefined : `#${id}: ${out.summary}`,
+            );
+          } catch (e) {
+            back(res, '/rol', undefined, (e as Error).message);
+          }
+          return true;
+        }
+
+        case '/rol/rad': {
+          const id = Number(body.get('id') ?? 0);
+          const note = String(body.get('note') ?? '').trim() || 'sabab yozilmagan';
+          const row = ctx.db.get<{ role: string }>('SELECT role FROM role_approvals WHERE id=?', id);
+          const pack = row ? byRoleId(row.role) : undefined;
+          if (!pack) return (back(res, '/rol', undefined, `#${id} topilmadi`), true);
+          try {
+            reject(ctx, pack, id, 'panel', note);
+            back(res, '/rol', `#${id} rad etildi`);
+          } catch (e) {
+            back(res, '/rol', undefined, (e as Error).message);
+          }
+          return true;
+        }
+
         case '/navlar/yoq': {
           const name = String(body.get('name') ?? '');
           const from = draftPath(name);
@@ -350,6 +409,52 @@ export async function handleWeb(ctx: Ctx, req: IncomingMessage, res: ServerRespo
     case '/lid':
       html(res, views.leadsPage(ctx, csrf, flash));
       return true;
+    case '/rol': {
+      const pack = byRoleId('marketing-employee');
+      if (!pack) { html(res, views.dashboard(ctx, csrf, flash)); return true; }
+
+      const to = dateKey(ctx.now, ctx.cfg.tz);
+      const from = dateKey(addDays(ctx.now, -6), ctx.cfg.tz);
+      const kpis = evaluateAll(ctx, pack, from, to);
+
+      html(
+        res,
+        views.rolePage(
+          {
+            pack,
+            active: isActive(ctx, pack.id),
+            approvals: pendingApprovals(ctx, pack.id).map((a) => ({
+              id: a.id,
+              action: a.action,
+              preview: a.preview,
+              reason: a.reason,
+              created: stamp(new Date(a.created_at), ctx.cfg.tz),
+            })),
+            kpis,
+            score: scoreOf(kpis),
+            log: recent(ctx.db, 20, pack.id).map((e) => ({
+              ts: stamp(new Date(e.ts), ctx.cfg.tz),
+              actor: e.actor,
+              event: e.event,
+              subject: e.subject,
+            })),
+            chain: verifyChain(ctx.db, pack.id),
+            runs: ctx.db.all(
+              `SELECT step, status, summary, started_at FROM role_runs r
+                 WHERE role = ?
+                   AND started_at = (SELECT MAX(started_at) FROM role_runs
+                                      WHERE role = r.role AND step = r.step)
+                 ORDER BY started_at DESC`,
+              pack.id,
+            ),
+          },
+          csrf,
+          flash,
+        ),
+      );
+      return true;
+    }
+
     case '/navlar': {
       const reg = await loadSkills();
       const active = reg.skills.map((s) => ({

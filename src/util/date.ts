@@ -111,6 +111,13 @@ export function weekdayUz(date: Date, tz: string): string {
   return WEEKDAYS_UZ[idx] ?? '';
 }
 
+/** Shu haftaning dushanbasi — haftalik uyalar uchun. */
+export function mondayOf(date: Date, tz: string): Date {
+  const p = parts(date, tz);
+  const wd = new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay(); // 0 = yakshanba
+  return addDays(date, -((wd + 6) % 7));
+}
+
 /**
  * Foydalanuvchi yozgan vaqtni tushunadi:
  *   "bugun 15:00", "ertaga 10:30", "indinga", "+2h", "+30m",

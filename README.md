@@ -108,6 +108,7 @@ npm run hamroh -- kun --html
 | `aloqa` | (11) Qo‘ng‘iroq va SMS | `hamroh aloqa sms +998... "matn"` |
 | `oylik` | (12) Doimiy to‘lovlar | `hamroh oylik check` |
 | `marketing` | (13) Marketing analitikasi | `hamroh marketing sync --days=7` |
+| `rol` | Rol paketlari (lavozimlar) | `hamroh rol korish` |
 | `mahsulot` | (14) Mahsulot va foyda | `hamroh mahsulot top` |
 | `soglik` | (15) Sog‘liq | `hamroh soglik report --days=7` |
 | `eslatma` | — | `hamroh eslatma list` |

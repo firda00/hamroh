@@ -10,6 +10,9 @@ import { unpaid } from '../modules/recurring.ts';
 import { leadsSince } from '../modules/leads.ts';
 import { pendingSms } from '../modules/comms.ts';
 import { makeSources } from '../marketing/index.ts';
+import type { RolePack } from '../roles/types.ts';
+import type { KpiResult } from '../roles/kpi.ts';
+import { formatKpi } from '../roles/kpi.ts';
 
 /** Sahifalar. Har biri tayyor HTML qaytaradi — shablon dvigateli yo'q. */
 
@@ -406,5 +409,128 @@ export function loginPage(error = ''): string {
       </form>
       <div class="note" style="margin-top:12px">Kalit <code>.env</code> dagi <code>HAMROH_WEB_TOKEN</code> qiymati.</div>`,
     ),
+  );
+}
+
+// ------------------------------------------------------------------- rol
+
+export type RoleView = {
+  pack: RolePack;
+  active: boolean;
+  approvals: { id: number; action: string; preview: string | null; reason: string; created: string }[];
+  kpis: KpiResult[];
+  score: { good: number; measured: number; percent: number | null };
+  log: { ts: string; actor: string; event: string; subject: string | null }[];
+  chain: { ok: boolean; checked: number; brokenAt?: { id: number; reason: string } };
+  runs: { step: string; status: string; summary: string | null; started_at: string }[];
+};
+
+const MODE_PILL: Record<string, string> = {
+  auto: '<span class="pill ok">o‘zi bajaradi</span>',
+  approval: '<span class="pill warn">tasdiq so‘raydi</span>',
+  deny: '<span class="pill bad">taqiq</span>',
+};
+
+const VERDICT_PILL: Record<string, string> = {
+  'yaxshi': '<span class="pill ok">maqsadda</span>',
+  'chegarada': '<span class="pill warn">chegarada</span>',
+  'yomon': '<span class="pill bad">maqsaddan uzoq</span>',
+  'ma’lumot yo‘q': '<span class="pill">ma’lumot yo‘q</span>',
+};
+
+export function rolePage(v: RoleView, csrf: string, flash: Flash): string {
+  const p = v.pack;
+
+  const header = `<div class="note" style="border-style:solid">
+    <b>${esc(p.name)} ${esc(p.version)}</b> — ${esc(p.mission)}
+  </div>
+  <div class="kpis" style="margin-top:12px">
+    <div class="kpi"><span>Holat</span><b>${v.active ? '✅ ishlamoqda' : '⏹ to‘xtatilgan'}</b></div>
+    <div class="kpi"><span>Tasdiq navbati</span><b>${v.approvals.length}</b></div>
+    <div class="kpi"><span>Ko‘rsatkichlar</span><b>${
+      v.score.percent === null ? '—' : `${v.score.good}/${v.score.measured}`
+    }</b>${v.score.percent === null ? '' : `<i class="${v.score.percent >= 60 ? 'up' : 'down'}">${v.score.percent}%</i>`}</div>
+    <div class="kpi"><span>Jurnal</span><b>${v.chain.ok ? '✅ butun' : '❌ uzilgan'}</b><i class="muted">${v.chain.checked} yozuv</i></div>
+  </div>
+  <form method="post" action="/rol/${v.active ? 'ochir' : 'yoq'}" class="row" style="margin-top:12px">
+    ${csrfField(csrf)}<input type="hidden" name="id" value="${esc(p.id)}"/>
+    <button class="${v.active ? 'ghost' : ''}">${v.active ? 'To‘xtatish' : 'Rolni yoqish'}</button>
+  </form>`;
+
+  const queue = v.approvals.length
+    ? v.approvals
+        .map(
+          (a) => `<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div><b>#${a.id}</b> <code>${esc(a.action)}</code></div>
+        <div style="margin:6px 0">${esc(a.preview ?? '—')}</div>
+        <div class="muted" style="font-size:13px">Nega to‘xtadi: ${esc(a.reason)} · ${esc(a.created)}</div>
+        <div class="row" style="margin-top:10px">
+          <form method="post" action="/rol/tasdiq" style="margin:0">
+            ${csrfField(csrf)}<input type="hidden" name="id" value="${a.id}"/>
+            <button>Tasdiqlash va bajarish</button>
+          </form>
+          <form method="post" action="/rol/rad" class="row" style="margin:0;flex:1">
+            ${csrfField(csrf)}<input type="hidden" name="id" value="${a.id}"/>
+            <input type="text" name="note" placeholder="rad etish sababi"/>
+            <button class="ghost">Rad etish</button>
+          </form>
+        </div>
+      </div>`,
+        )
+        .join('')
+    : '<div class="empty">Tasdiq kutayotgan amal yo‘q.</div>';
+
+  const kpiRows = v.kpis.map((k) => [
+    esc(k.title),
+    esc(formatKpi(k.value, k.unit)),
+    esc(formatKpi(k.target, k.unit)),
+    k.attainment === null ? '—' : `${k.attainment}%`,
+    VERDICT_PILL[k.verdict] ?? '',
+    `<span class="muted">${esc(k.why)}</span>`,
+  ]);
+
+  const permRows = p.permissions.map((perm) => [
+    `<code>${esc(perm.action)}</code>`,
+    MODE_PILL[perm.mode] ?? esc(perm.mode),
+    `<span class="muted">${esc(perm.why)}</span>`,
+  ]);
+
+  const flowRows = p.workflow.map((s) => {
+    const run = v.runs.find((r) => r.step === s.id);
+    return [
+      esc(s.title),
+      `<code>${esc(s.action)}</code>`,
+      esc(s.cron ?? 'qo‘lda'),
+      run ? esc(run.status) : '<span class="muted">hali ishlamagan</span>',
+      `<span class="muted">${esc(run?.summary ?? s.produces)}</span>`,
+    ];
+  });
+
+  const logRows = v.log.map((e) => [
+    esc(e.ts),
+    e.actor === 'odam' ? `<b>${esc(e.actor)}</b>` : esc(e.actor),
+    esc(e.event),
+    `<code>${esc(e.subject ?? '—')}</code>`,
+  ]);
+
+  const chainNote = v.chain.ok
+    ? `<div class="note">Har bir yozuv oldingisining barmoq iziga bog‘langan.
+       Bitta qatorni o‘zgartirsangiz — tekshiruv shuni ko‘rsatadi.</div>`
+    : `<div class="flash bad">Jurnal zanjiri uzilgan: yozuv #${v.chain.brokenAt?.id} —
+       ${esc(v.chain.brokenAt?.reason ?? '')}. Ya’ni jurnal tashqaridan o‘zgartirilgan.</div>`;
+
+  return page(
+    { title: 'Rol', subtitle: `${p.does.length} vazifa · ${p.permissions.length} ruxsat qoidasi`, path: '/rol', flash },
+    header +
+      card('Tasdiq kutmoqda', queue) +
+      card('Ko‘rsatkichlar (7 kun)', table(['Ko‘rsatkich', 'Haqiqiy', 'Maqsad', 'Bajarildi', 'Xulosa', 'Nega muhim'], kpiRows)) +
+      card('Ish oqimi', table(['Qadam', 'Amal', 'Jadval', 'Oxirgi holat', 'Natija'], flowRows)) +
+      card('Ruxsatlar', table(['Amal', 'Rejim', 'Sabab'], permRows)) +
+      card(
+        'Nima qiladi va nima qilmaydi',
+        `<ul class="plain">${p.does.map((d) => `<li>✅ ${esc(d)}</li>`).join('')}</ul>
+         <ul class="plain" style="margin-top:10px">${p.doesNot.map((d) => `<li>🚫 ${esc(d)}</li>`).join('')}</ul>`,
+      ) +
+      card('Jurnal', table(['Vaqt', 'Kim', 'Hodisa', 'Nima ustida'], logRows) + chainNote),
   );
 }

@@ -21,6 +21,7 @@ export const NAV: NavItem[] = [
   { href: '/kalendar', label: 'Kalendar' },
   { href: '/moliya', label: 'Moliya' },
   { href: '/lid', label: 'Lidlar' },
+  { href: '/rol', label: 'Rol' },
   { href: '/navlar', label: 'Navyklar' },
   { href: '/sozlama', label: 'Sozlamalar' },
 ];
@@ -71,6 +72,7 @@ button:hover { filter:brightness(1.06); }
 .pill { display:inline-block; font-size:12px; padding:2px 9px; border-radius:99px; border:1px solid var(--line); color:var(--muted); }
 .pill.ok { color:var(--ok); border-color:currentColor; }
 .pill.bad { color:var(--bad); border-color:currentColor; }
+.pill.warn { color:var(--warn); border-color:currentColor; }
 .note { background:var(--bg); border:1px dashed var(--line); border-radius:10px; padding:10px 12px; font-size:13px; color:var(--muted); }
 .flash { border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:14px; }
 .flash.ok { background:rgba(18,160,106,.12); color:var(--ok); }

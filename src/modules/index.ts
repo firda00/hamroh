@@ -22,6 +22,7 @@ import { marketingModule } from './marketing.ts';
 import { productsModule } from './products.ts';
 import { healthModule } from './health.ts';
 import { notifyModule } from './notify.ts';
+import { rolesModule } from './roles.ts';
 
 /** Barcha modullar ro'yxati. Yangi modul shu yerga qo'shiladi — boshqa joyga tegmaydi. */
 export const modules: Module[] = [
@@ -48,6 +49,7 @@ export const modules: Module[] = [
   productsModule, // (14) mahsulot va foyda
   healthModule, // (15) sog'liq
   notifyModule, //      eslatmalar navbati
+  rolesModule, //       rol paketlari (lavozimlar)
 ];
 
 export const byId = (id: string): Module | undefined => modules.find((m) => m.id === id);

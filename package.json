@@ -14,6 +14,7 @@
     "bot": "node src/cli.ts bot start",
     "sozlash": "node src/cli.ts sozlash start",
     "seed": "node scripts/seed.ts",
+    "demo-rol": "node scripts/demo-rol.ts",
     "eval": "node scripts/eval-llm.ts",
     "test": "node --test",
     "typecheck": "tsc --noEmit"

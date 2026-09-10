@@ -5,13 +5,13 @@
 Maqsad: tizim LLM'siz ham foydali bo‘lsin. Barcha ma’lumot lokal, hamma hisob-kitob
 deterministik. LLM ulanmasa ham kunlik ish to‘xtamaydi.
 
-- 23 modul, 117 ta buyruq, 22 ta cron vazifasi
+- 24 modul, 128 ta buyruq, 29 ta cron vazifasi
 - Lokal SQLite baza (22 jadval), nol runtime bog‘liqlik
 - Kalitsiz tashqi manbalar: CBU (kurs), Open-Meteo (ob-havo), Google News RSS
 - Ertalabki brifing va kun yakuni + o‘sish darajasi
 - Haqiqiy `.xlsx` / `.docx` eksport, diagrammali HTML hisobot
 - Telegram integratsiyasi (token bo‘lsa)
-- 89 ta test, TypeScript tekshiruvi
+- 118 ta test, TypeScript tekshiruvi
 
 ## Bosqich 2 — LLM ulash
 
@@ -82,6 +82,17 @@ Har biri alohida kalit/ruxsat talab qiladi, shuning uchun alohida bosqich:
 - [x] ~~Telegram bot to‘liq boshqaruv paneli sifatida (tugmalar bilan)~~ (bajarildi: `bot` moduli)
 - [x] ~~Veb interfeys~~ (bajarildi: `npm run panel`, [WEB.md](WEB.md))
 - [ ] Mobil bildirishnomalar
+
+## Rol paketlari (lavozimlar)
+
+- [x] ~~Rol paketi formati: ruxsat, ish oqimi, tasdiq, KPI, jurnal~~ ([ROLES.md](ROLES.md))
+- [x] ~~NEMO Marketing Employee v1 — birinchi production paket~~
+- [x] ~~Ruxsatlarni haqiqiy tekshirish: ro‘yxatda yo‘q amal bajarilmaydi~~
+- [x] ~~Tasdiq navbati: CLI va panel orqali~~
+- [x] ~~O‘zgarmas jurnal (hash zanjiri) va uni tekshirish~~
+- [x] ~~Mijozga ko‘rsatish uchun demo ssenariy (`npm run demo-rol`)~~
+- [ ] Telegram tugmasi bilan tasdiqlash
+- [ ] Ikkinchi paket: sotuv yoki buxgalter roli
 
 ## Xavfsizlik
 

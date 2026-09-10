@@ -90,6 +90,15 @@ export const calendarModule: Module = {
         const synced = gid ? ' · Google Calendar ✓' : ctx.gcal.enabled ? ' · Google Calendar ✗ (keyin: kalendar sync)' : '';
         return {
           text: `📅 #${r.lastInsertRowid} ${title} — ${stamp(start, ctx.cfg.tz)}–${timeKey(end, ctx.cfg.tz)} (${humanUntil(start, ctx.now)})${synced}`,
+          // Chaqiruvchiga natija kerak: JSON API ham, rol qatlami ham
+          // "haqiqatan yaratildimi" degan savolga shu yerdan javob oladi.
+          data: {
+            id: r.lastInsertRowid,
+            title,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            googleId: gid ?? null,
+          },
         };
       },
     },
